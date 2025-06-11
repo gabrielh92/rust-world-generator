@@ -1,6 +1,8 @@
 mod canvas;
 mod params;
+mod pipeline;
 mod ui;
+mod visualization;
 
 static DEBUG_APP_NAME: &str = "WorldGen Debug UI";
 

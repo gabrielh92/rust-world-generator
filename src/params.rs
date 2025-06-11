@@ -1,6 +1,55 @@
 use std::any::Any;
 use std::fmt::Debug;
 
+#[derive(Debug)]
+pub struct ParamGroup {
+    pub title: String,
+    pub enabled: bool,
+    pub params: Vec<Param>,
+}
+
+impl ParamGroup {
+    pub fn new<T: Into<String>>(title: T, params: Vec<Param>) -> Self {
+        Self {
+            title: title.into(),
+            enabled: true,
+            params,
+        }
+    }
+
+    /// Draws all parameter controls inside a collapsible UI section.
+    /// Returns true if any parameter was visibly changed.
+    pub fn draw_controls(&mut self, ui: &mut egui::Ui) -> bool {
+        let mut changed = false;
+
+        ui.collapsing(&self.title, |ui| {
+            ui.checkbox(&mut self.enabled, "Enabled");
+
+            if self.enabled {
+                for param in self.params.iter_mut() {
+					// todo: implement the changed state properly
+                    param.draw(ui);
+					changed = true;
+                }
+            }
+        });
+
+        changed
+    }
+
+    pub fn is_enabled(&self) -> bool {
+        self.enabled
+    }
+
+    pub fn get_param(&self, name: &str) -> Option<&Param> {
+        self.params.iter().find(|p| p.name == name)
+    }
+
+    pub fn get_param_mut(&mut self, name: &str) -> Option<&mut Param> {
+        self.params.iter_mut().find(|p| p.name == name)
+    }
+}
+
 // bool param
 #[derive(Debug)]
 pub struct BoolParam {
@@ -129,7 +178,10 @@ impl ParamValue for StringParam {
     }
 }
 
-/// The core trait for any parameter value (f32, usize, bool, etc.)
+//////////////////////////////////////////////////////////////////////
+/// The core trait for any parameter value (f32, usize, bool, etc.) //
+//////////////////////////////////////////////////////////////////////
+
 pub trait ParamValue: Debug + Send {
     fn draw(&mut self, ui: &mut egui::Ui);
 
