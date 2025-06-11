@@ -5,44 +5,56 @@ use crate::pipeline::StageOutputs;
 use crate::visualization::VisualLayer;
 
 pub struct CanvasLayer {
-	pub config: ParamGroup,
+    pub config: ParamGroup,
 }
 
 impl Default for CanvasLayer {
-	fn default() -> Self {
-		Self {
-			config: ParamGroup {
-				title: "Canvas Settings".into(),
-				enabled: true,
-				params: vec![
-					Param {
-						name: "width".into(), tooltip: Some("Width in px".into()),
-						value: Box::new(FloatParam { val: 800., min: 400., max: 2400., step: 100. })
-					},
-					Param {
-						name: "height".into(), tooltip: Some("Height in px".into()),
-						value: Box::new(FloatParam { val: 600., min: 200., max: 1200., step: 100. })
-					},
-				]
-			}
-		}
-	}
+    fn default() -> Self {
+        Self {
+            config: ParamGroup {
+                title: "Canvas Settings".into(),
+                enabled: true,
+                params: vec![
+                    Param {
+                        name: "width".into(),
+                        tooltip: Some("Width in px".into()),
+                        value: Box::new(FloatParam {
+                            val: 800.,
+                            min: 400.,
+                            max: 2400.,
+                            step: 100.,
+                        }),
+                    },
+                    Param {
+                        name: "height".into(),
+                        tooltip: Some("Height in px".into()),
+                        value: Box::new(FloatParam {
+                            val: 600.,
+                            min: 200.,
+                            max: 1200.,
+                            step: 100.,
+                        }),
+                    },
+                ],
+            },
+        }
+    }
 }
 
 impl CanvasLayer {
-	pub fn width(&self) -> f32 {
-		self.config
-			.get_param("width")
-			.and_then(|p| p.as_float())
-			.unwrap_or(800.0)
-	}
+    pub fn width(&self) -> f32 {
+        self.config
+            .get_param("width")
+            .and_then(|p| p.as_float())
+            .unwrap_or(800.0)
+    }
 
-	pub fn height(&self) -> f32 {
-		self.config
-			.get_param("height")
-			.and_then(|p| p.as_float())
-			.unwrap_or(600.0)
-	}
+    pub fn height(&self) -> f32 {
+        self.config
+            .get_param("height")
+            .and_then(|p| p.as_float())
+            .unwrap_or(600.0)
+    }
 }
 
 impl VisualLayer for CanvasLayer {
@@ -63,7 +75,7 @@ impl VisualLayer for CanvasLayer {
     }
 
     fn draw_controls(&mut self, ui: &mut egui::Ui) {
-		let name = self.name().to_string();
+        let name = self.name().to_string();
         ui.collapsing(name, |ui| {
             ui.checkbox(&mut self.is_enabled(), "Enabled");
             if self.is_enabled() {
@@ -73,15 +85,10 @@ impl VisualLayer for CanvasLayer {
         });
     }
 
-    fn draw_canvas(
-        &self,
-        painter: &egui::Painter,
-        canvas: &CanvasLayer,
-        _data: &StageOutputs,
-    ) {
-		let width = canvas.width();
-		let height = canvas.height();
-		painter.rect_filled(painter.clip_rect(), 0.0, egui::Color32::WHITE);
+    fn draw_canvas(&self, painter: &egui::Painter, canvas: &CanvasLayer, _data: &StageOutputs) {
+        let width = canvas.width();
+        let height = canvas.height();
+        painter.rect_filled(painter.clip_rect(), 0.0, egui::Color32::WHITE);
         painter.text(
             egui::pos2(10.0, 10.0),
             egui::Align2::LEFT_TOP,

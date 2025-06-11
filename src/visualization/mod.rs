@@ -1,7 +1,7 @@
-use egui::{Ui, Painter};
+use crate::canvas::CanvasLayer;
 use crate::params::ParamGroup;
 use crate::pipeline::StageOutputs;
-use crate::canvas::CanvasLayer;
+use egui::{Painter, Ui};
 
 pub trait VisualLayer {
     fn name(&self) -> &str;

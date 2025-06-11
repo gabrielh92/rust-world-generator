@@ -20,7 +20,7 @@ pub trait PipelineStage {
 pub type StageOutputs = std::collections::HashMap<String, StageOutput>;
 
 pub enum StageOutput {
-	// todo: replace with an agnostic vector type
+    // todo: replace with an agnostic vector type
     Points(Vec<egui::Pos2>),
     // Add other types as needed
 }

@@ -27,9 +27,9 @@ impl ParamGroup {
 
             if self.enabled {
                 for param in self.params.iter_mut() {
-					// todo: implement the changed state properly
+                    // todo: implement the changed state properly
                     param.draw(ui);
-					changed = true;
+                    changed = true;
                 }
             }
         });
@@ -100,11 +100,21 @@ impl ParamValue for FloatParam {
         );
     }
 
-    fn as_str(&self) -> &str { panic!("FloatParam has no string value") }
-    fn as_bool(&self) -> &bool { panic!("FloatParam has no bool value") }
-    fn as_int(&self) -> &usize { panic!("FloatParam has no int value") }
-    fn as_float(&self) -> &f32 { &self.val }
-    fn as_any(&self) -> &dyn Any { self }
+    fn as_str(&self) -> &str {
+        panic!("FloatParam has no string value")
+    }
+    fn as_bool(&self) -> &bool {
+        panic!("FloatParam has no bool value")
+    }
+    fn as_int(&self) -> &usize {
+        panic!("FloatParam has no int value")
+    }
+    fn as_float(&self) -> &f32 {
+        &self.val
+    }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
 /// usize param
@@ -185,12 +195,12 @@ impl ParamValue for StringParam {
 pub trait ParamValue: Debug + Send {
     fn draw(&mut self, ui: &mut egui::Ui);
 
-	fn as_str(&self) -> &str;
-	fn as_bool(&self) -> &bool;
-	fn as_int(&self) -> &usize;
-	fn as_float(&self) -> &f32;
+    fn as_str(&self) -> &str;
+    fn as_bool(&self) -> &bool;
+    fn as_int(&self) -> &usize;
+    fn as_float(&self) -> &f32;
 
-	fn as_any(&self) -> &dyn Any;
+    fn as_any(&self) -> &dyn Any;
 }
 
 #[derive(Debug)]
@@ -201,7 +211,7 @@ pub struct Param {
 }
 
 impl Param {
-	pub fn draw(&mut self, ui: &mut egui::Ui) {
+    pub fn draw(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             let label = egui::RichText::new(&self.name).strong();
             if let Some(tt) = &self.tooltip {
@@ -215,14 +225,23 @@ impl Param {
     }
 
     pub fn as_float(&self) -> Option<f32> {
-        self.value.as_any().downcast_ref::<FloatParam>().map(|p| p.val)
+        self.value
+            .as_any()
+            .downcast_ref::<FloatParam>()
+            .map(|p| p.val)
     }
 
     pub fn as_int(&self) -> Option<usize> {
-        self.value.as_any().downcast_ref::<IntParam>().map(|p| p.val)
+        self.value
+            .as_any()
+            .downcast_ref::<IntParam>()
+            .map(|p| p.val)
     }
 
     pub fn as_bool(&self) -> Option<bool> {
-        self.value.as_any().downcast_ref::<BoolParam>().map(|p| p.val)
+        self.value
+            .as_any()
+            .downcast_ref::<BoolParam>()
+            .map(|p| p.val)
     }
 }
