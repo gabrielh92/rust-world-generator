@@ -3,6 +3,8 @@ use crate::params::ParamGroup;
 use crate::pipeline::StageOutputs;
 use egui::{Painter, Ui};
 
+pub mod points;
+
 pub trait VisualLayer {
     fn name(&self) -> &str;
     fn is_enabled(&self) -> bool;
@@ -15,4 +17,10 @@ pub trait VisualLayer {
 
     /// Draws onto canvas using outputs from pipeline
     fn draw_canvas(&self, painter: &Painter, canvas: &CanvasLayer, data: &StageOutputs);
+}
+
+impl Default for Box<dyn VisualLayer> {
+    fn default() -> Box<dyn VisualLayer> {
+        Box::new(CanvasLayer::default())
+    }
 }
