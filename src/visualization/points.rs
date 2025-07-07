@@ -1,94 +1,77 @@
-use crate::canvas::CanvasLayer;
-use crate::params::{BoolParam, FloatParam, IntParam, Param, ParamGroup};
-use crate::pipeline::StageOutput;
-use crate::pipeline::StageOutputs;
+use crate::util::make_stage_data_key;
+use crate::pipeline::StageDataMap;
 use crate::visualization::VisualLayer;
-use egui::{Color32, Painter, Ui};
+use egui::{Color32, Painter, Rect, Ui};
+use crate::params::ParamGroup;
+use crate::pipeline::points::PointsOutput;
 
 pub struct PointsVisualLayer {
-    params: ParamGroup,
+	enabled: bool,
 }
 
-impl PointsVisualLayer {
-    pub fn new() -> Self {
-        Self {
-            params: ParamGroup::new(
-                "Point Distribution",
-                vec![
-                    Param {
-                        name: "Point Count".into(),
-                        tooltip: Some("How many points to generate".into()),
-                        value: Box::new(IntParam {
-                            val: 1000,
-                            min: 10,
-                            max: 5000,
-                            step: 50,
-                        }),
-                    },
-                    Param {
-                        name: "Show Points".into(),
-                        tooltip: Some("Toggle point visibility".into()),
-                        value: Box::new(BoolParam { val: true }),
-                    },
-                    Param {
-                        name: "Point Radius".into(),
-                        tooltip: Some("Circle size of each point".into()),
-                        value: Box::new(FloatParam {
-                            val: 2.0,
-                            min: 0.5,
-                            max: 10.0,
-                            step: 0.5,
-                        }),
-                    },
-                ],
-            ),
-        }
-    }
+impl Default for PointsVisualLayer {
+	fn default() -> Self {
+		Self {
+			enabled: false,
+		}
+	}
 }
 
 impl VisualLayer for PointsVisualLayer {
-    fn name(&self) -> &str {
+    fn display_name(&self) -> &str {
         "Points"
     }
 
     fn is_enabled(&self) -> bool {
-        self.params.is_enabled()
+        self.enabled
     }
 
-    fn set_enabled(&mut self, value: bool) {
-        self.params.enabled = value;
+    fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
     }
 
-    fn params(&mut self) -> Option<&mut ParamGroup> {
-        Some(&mut self.params)
-    }
+	fn draw_controls(&mut self, ui: &mut Ui, params: Option<&mut ParamGroup>) -> bool {
+		let mut changed = false;
 
-    fn draw_controls(&mut self, ui: &mut Ui) {
-        self.params.draw_controls(ui);
-    }
+		let name = self.display_name().to_string();
+		let enabled = &mut self.enabled;
 
-    fn draw_canvas(&self, painter: &Painter, canvas: &CanvasLayer, data: &StageOutputs) {
-        if !self.is_enabled() {
+		ui.collapsing(name, |ui| {
+			changed |= ui.checkbox(enabled, "Enabled").changed();
+
+			if *enabled {
+				if let Some(p) = params {
+					// Don't call p.draw_controls(ui), because it includes its own collapsible.
+					// Instead, draw just the inner fields manually:
+					for param in &mut p.params {
+						changed |= param.draw(ui);
+					}
+				}
+			}
+		});
+
+		changed
+	}
+
+
+    fn draw_canvas(&self, painter: &Painter, rect: &Rect, params: Option<&ParamGroup>, data: &StageDataMap) {
+        if !self.enabled {
             return;
         }
 
-        if let Some(StageOutput::Points(points)) = data.get("points") {
-            let radius = self
-                .params
-                .get_param("Point Radius")
-                .and_then(|p| p.as_float())
-                .unwrap_or(2.0);
-            let show = self
-                .params
-                .get_param("Show Points")
-                .and_then(|p| p.as_bool())
-                .unwrap_or(true);
+		let params = params.unwrap();
+        let radius = params.get_param("Point Radius").and_then(|p| p.as_float()).unwrap();
 
-            if show {
-                for &pos in points {
-                    painter.circle_filled(pos, radius, Color32::BLACK);
-                }
-            }
-        }
+		if let Some(output) = data.get(make_stage_data_key("points", 1).as_str()) {
+			if let Some(points) = output.as_any().downcast_ref::<PointsOutput>() {
+				println!("Found {} points to draw", points.points.len());
+				let offset = rect.min.to_vec2(); // top-left corner of canvas
+
+				for pos in &points.points {
+					let canvas_pos = *pos + offset;
+					painter.circle_filled(canvas_pos, radius, Color32::BLACK);
+				}
+			}
+		}
     }
 }

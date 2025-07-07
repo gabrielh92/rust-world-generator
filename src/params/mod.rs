@@ -27,9 +27,7 @@ impl ParamGroup {
 
             if self.enabled {
                 for param in self.params.iter_mut() {
-                    // todo: implement the changed state properly
-                    param.draw(ui);
-                    changed = true;
+                    changed |= param.draw(ui);
                 }
             }
         });
@@ -57,8 +55,8 @@ pub struct BoolParam {
 }
 
 impl ParamValue for BoolParam {
-    fn draw(&mut self, ui: &mut egui::Ui) {
-        ui.checkbox(&mut self.val, "");
+    fn draw(&mut self, ui: &mut egui::Ui) -> bool {
+        ui.checkbox(&mut self.val, "").changed()
     }
 
     fn as_str(&self) -> &str {
@@ -92,12 +90,12 @@ pub struct FloatParam {
 }
 
 impl ParamValue for FloatParam {
-    fn draw(&mut self, ui: &mut egui::Ui) {
+    fn draw(&mut self, ui: &mut egui::Ui) -> bool {
         ui.add(
             egui::Slider::new(&mut self.val, self.min..=self.max)
                 .step_by(self.step as f64)
                 .text(""),
-        );
+        ).changed()
     }
 
     fn as_str(&self) -> &str {
@@ -127,12 +125,12 @@ pub struct IntParam {
 }
 
 impl ParamValue for IntParam {
-    fn draw(&mut self, ui: &mut egui::Ui) {
+    fn draw(&mut self, ui: &mut egui::Ui) -> bool {
         ui.add(
             egui::Slider::new(&mut self.val, self.min..=self.max)
                 .step_by(self.step as f64)
                 .text(""),
-        );
+        ).changed()
     }
 
     fn as_str(&self) -> &str {
@@ -163,8 +161,8 @@ pub struct StringParam {
 }
 
 impl ParamValue for StringParam {
-    fn draw(&mut self, ui: &mut egui::Ui) {
-        ui.text_edit_singleline(&mut self.val);
+    fn draw(&mut self, ui: &mut egui::Ui) -> bool {
+        ui.text_edit_singleline(&mut self.val).changed()
     }
 
     fn as_str(&self) -> &str {
@@ -193,7 +191,7 @@ impl ParamValue for StringParam {
 //////////////////////////////////////////////////////////////////////
 
 pub trait ParamValue: Debug + Send {
-    fn draw(&mut self, ui: &mut egui::Ui);
+    fn draw(&mut self, ui: &mut egui::Ui) -> bool;
 
     fn as_str(&self) -> &str;
     fn as_bool(&self) -> &bool;
@@ -211,7 +209,8 @@ pub struct Param {
 }
 
 impl Param {
-    pub fn draw(&mut self, ui: &mut egui::Ui) {
+    pub fn draw(&mut self, ui: &mut egui::Ui) -> bool {
+		let mut changed = false;
         ui.horizontal(|ui| {
             let label = egui::RichText::new(&self.name).strong();
             if let Some(tt) = &self.tooltip {
@@ -220,8 +219,9 @@ impl Param {
                 ui.label(label);
             }
 
-            self.value.draw(ui);
+            changed = self.value.draw(ui);
         });
+		changed
     }
 
     pub fn as_float(&self) -> Option<f32> {
@@ -245,3 +245,6 @@ impl Param {
             .map(|p| p.val)
     }
 }
+
+pub mod builder;
+pub mod util;

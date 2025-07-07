@@ -1,8 +1,20 @@
 use egui::{Color32, Painter, Rect, Sense, Ui, Vec2};
 
 use crate::params::{FloatParam, Param, ParamGroup};
-use crate::pipeline::StageOutputs;
+use crate::pipeline::{StageData, StageDataMap};
 use crate::visualization::VisualLayer;
+
+#[derive(Clone, Debug)]
+pub struct CanvasData {
+	pub width: f32,
+	pub height: f32,
+}
+
+impl StageData for CanvasData {
+	fn as_any(&self) -> &dyn std::any::Any {
+		self
+	}
+}
 
 pub struct CanvasLayer {
     pub config: ParamGroup,
@@ -46,19 +58,19 @@ impl CanvasLayer {
         self.config
             .get_param("width")
             .and_then(|p| p.as_float())
-            .unwrap_or(800.0)
+            .unwrap()
     }
 
     pub fn height(&self) -> f32 {
         self.config
             .get_param("height")
             .and_then(|p| p.as_float())
-            .unwrap_or(600.0)
+            .unwrap()
     }
 }
 
 impl VisualLayer for CanvasLayer {
-    fn name(&self) -> &str {
+    fn display_name(&self) -> &str {
         &self.config.title
     }
 
@@ -70,31 +82,31 @@ impl VisualLayer for CanvasLayer {
         self.config.enabled = enabled;
     }
 
-    fn params(&mut self) -> Option<&mut ParamGroup> {
-        None // Canvas config is global; no dynamic params here
-    }
-
-    fn draw_controls(&mut self, ui: &mut egui::Ui) {
-        let name = self.name().to_string();
+    fn draw_controls(&mut self, ui: &mut egui::Ui, _params: Option<&mut ParamGroup>) -> bool {
+		let (mut changed_width, mut changed_height) = (false, false);
+        let name = self.display_name().to_string();
         ui.collapsing(name, |ui| {
             ui.checkbox(&mut self.is_enabled(), "Enabled");
             if self.is_enabled() {
-                self.config.get_param_mut("width").map(|p| p.draw(ui));
-                self.config.get_param_mut("height").map(|p| p.draw(ui));
+                changed_width = self.config.get_param_mut("width").map(|p| p.draw(ui)).unwrap_or(false);
+                changed_height = self.config.get_param_mut("height").map(|p| p.draw(ui)).unwrap_or(false);
             }
         });
+		changed_width | changed_height
     }
 
-    fn draw_canvas(&self, painter: &egui::Painter, canvas: &CanvasLayer, _data: &StageOutputs) {
-        let width = canvas.width();
-        let height = canvas.height();
+    fn draw_canvas(&self, painter: &egui::Painter, _rect: &Rect, _params: Option<&ParamGroup>, _data: &StageDataMap) {
+		println!("Drawing canvas for layer: {}", self.display_name());
+
+        let width = self.width();
+        let height = self.height();
         painter.rect_filled(painter.clip_rect(), 0.0, egui::Color32::WHITE);
         painter.text(
             egui::pos2(10.0, 10.0),
             egui::Align2::LEFT_TOP,
             format!("Canvas: {width} x {height}"),
             egui::FontId::monospace(14.0),
-            egui::Color32::DARK_GRAY,
+            Color32::DARK_GRAY,
         );
     }
 }
@@ -107,6 +119,7 @@ pub fn show_canvas(ui: &mut Ui, canvas_layer: &CanvasLayer) -> (Rect, Painter) {
 
     // Optional: Draw a dark background for visibility
     painter.rect_filled(response.rect, 0.0, Color32::WHITE);
+	painter.rect_stroke(response.rect, 0.0, egui::Stroke::new(1.0, Color32::RED));
 
     (response.rect, painter)
 }
