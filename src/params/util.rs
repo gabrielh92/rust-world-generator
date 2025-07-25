@@ -5,6 +5,8 @@ use crate::params::builder::ParamGroupBuilder;
 /// Points
 pub fn build_default_point_params() -> ParamGroup {
     ParamGroupBuilder::new("Point Distribution")
+		.enum_param("Distribution", vec!["Random Uniform".into(), "Poisson Disc".into()], 0)
+			.with_tooltip("Changes point distribution algorithm")
         .int_param("Point Count", 1000, 10, 5000, 50)
             .with_tooltip("How many points to generate")
         .float_param("Point Radius", 2.0, 0.5, 10.0, 0.5)

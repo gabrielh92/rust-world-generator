@@ -1,4 +1,4 @@
-use crate::params::{Param, IntParam, FloatParam, BoolParam, ParamGroup};
+use crate::params::{BoolParam, EnumParam, FloatParam, IntParam, Param, ParamGroup};
 
 /// Builder
 pub struct ParamGroupBuilder {
@@ -42,6 +42,15 @@ impl ParamGroupBuilder {
         });
         self
     }
+
+	pub fn enum_param(mut self, name: impl Into<String>, options: Vec<String>, selected: usize) -> Self {
+		self.params.push(Param {
+			name: name.into(),
+			tooltip: None,
+			value: Box::new(EnumParam { options, selected })
+		});
+		self
+	}
 
 	pub fn with_tooltip(mut self, tooltip: impl Into<String>) -> Self {
         if let Some(last) = self.params.last_mut() {

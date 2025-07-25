@@ -186,6 +186,52 @@ impl ParamValue for StringParam {
     }
 }
 
+// enum param
+#[derive(Debug)]
+pub struct EnumParam {
+	pub options: Vec<String>,
+	pub selected: usize,
+}
+
+impl ParamValue for EnumParam {
+	fn draw(&mut self, ui: &mut egui::Ui) -> bool {
+		let mut changed = false;
+		let current = self.selected;
+
+        egui::ComboBox::from_id_source(ui.id().with("enum_param"))
+            .selected_text(&self.options[current])
+            .show_ui(ui, |ui| {
+                for (i, opt) in self.options.iter().enumerate() {
+                    if ui.selectable_label(self.selected == i, opt).clicked() {
+                        self.selected = i;
+                        changed = true;
+                    }
+                }
+            });
+		changed
+	}
+
+	fn as_str(&self) -> &str {
+		&self.options[self.selected]
+	}
+
+	fn as_bool(&self) -> &bool {
+		panic!("EnumParam has no bool value")
+	}
+
+	fn as_int(&self) -> &usize {
+        &self.selected
+    }
+
+    fn as_float(&self) -> &f32 {
+        panic!("EnumParam has no float value")
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
 //////////////////////////////////////////////////////////////////////
 /// The core trait for any parameter value (f32, usize, bool, etc.) //
 //////////////////////////////////////////////////////////////////////
