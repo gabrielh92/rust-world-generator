@@ -5,12 +5,11 @@ use crate::params::ParamGroup;
 use crate::params::util::build_default_point_params;
 use crate::pipeline::{PipelineStage, PipelineStageExecutor};
 use crate::pipeline::{StageData, StageDataMap};
-use crate::util::make_stage_data_key;
 use crate::visualization::points::PointsVisualLayer;
 
 pub fn make_points_stage() -> PipelineStage {
 	PipelineStage {
-		executor: Box::new(PointsStage::<RandomUniformDistribution>::default()),
+		executor: Box::new(PointsStage::default()),
 		params: Some(build_default_point_params()),
 		visual_layer: Box::new(PointsVisualLayer::default()),
 	}
@@ -27,19 +26,15 @@ impl StageData for PointsOutput {
 	}
 }
 
-pub struct PointsStage<D: PointsDistribution> {
-	pub distribution: D,
-}
+pub struct PointsStage;
 
-impl<D: PointsDistribution + Default> Default for PointsStage<D> {
+impl Default for PointsStage {
 	fn default() -> Self {
-		Self {
-			distribution: D::default(),
-		}
+		Self
 	}
 }
 
-impl<D: PointsDistribution> PipelineStageExecutor for PointsStage<D> {
+impl PipelineStageExecutor for PointsStage {
 	fn name(&self) -> &str { "points" }
 	fn rank(&self) -> u8 { 1 }
 
@@ -52,19 +47,17 @@ impl<D: PointsDistribution> PipelineStageExecutor for PointsStage<D> {
 			.and_then(|p| p.as_int())
 			.unwrap();
 
-		// let distribution_type = params
-		// 	.and_then(|pg| pg.get_param("Distribution"))
-		// 	.and_then(|p| p.as_enum())
-		// 	.and_then(|index| PointDistributionType::all_variants().get(*index))
-		// 	.and_then(|label| PointDistributionType::from_str(label))
-		// 	.unwrap();
+		let distribution_name = params
+			.and_then(|pg| pg.get_param("Distribution"))
+			.map(|p| p.value.as_str() )
+			.unwrap();
 
-		let points = match PointDistributionType::RandomUniformDistribution {
-			PointDistributionType::RandomUniformDistribution => {
-				RandomUniformDistribution.generate_points(count, canvas.width, canvas.height)
+		let points = match distribution_name {
+			"Uniform Grid" => {
+				UniformGridDistribution.generate_points(count, canvas.width, canvas.height)
 			}
-			PointDistributionType::PoissonDiscDistribution => {
-				PoissonDiscDistribution.generate_points(count, canvas.width, canvas.height)
+			"Random Uniform" | _ => {
+				RandomUniformDistribution.generate_points(count, canvas.width, canvas.height)
 			}
 		};
         Box::new(PointsOutput { points })
@@ -76,33 +69,7 @@ pub trait PointsDistribution {
 	fn generate_points(&mut self, count: usize, width: f32, height: f32) -> Vec<egui::Pos2>;
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PointDistributionType {
-	RandomUniformDistribution,
-	PoissonDiscDistribution,
-}
-
-impl PointDistributionType {
-    pub fn all_variants() -> &'static [&'static str] {
-        &["Random Uniform", "Poisson Disc"]
-    }
-
-    pub fn from_str(s: &str) -> Option<Self> {
-        match s {
-            "Random Uniform" => Some(Self::RandomUniformDistribution),
-            "Poisson Disc" => Some(Self::PoissonDiscDistribution),
-            _ => None,
-        }
-    }
-
-    pub fn to_str(&self) -> &'static str {
-        match self {
-            Self::RandomUniformDistribution => "Random Uniform",
-            Self::PoissonDiscDistribution => "Poisson Disc",
-        }
-    }
-}
-
+// todo: add more complex distributions, such as poisson disc, gaussian, blue noise
 #[derive(Default)]
 pub struct RandomUniformDistribution;
 
@@ -119,9 +86,9 @@ impl PointsDistribution for RandomUniformDistribution {
 }
 
 #[derive(Default)]
-pub struct PoissonDiscDistribution;
+pub struct UniformGridDistribution;
 
-impl PointsDistribution for PoissonDiscDistribution {
+impl PointsDistribution for UniformGridDistribution {
     fn generate_points(&mut self, count: usize, width: f32, height: f32) -> Vec<egui::Pos2> {
         // todo: placeholder: generate uniform grid with some spacing
         let mut points = Vec::new();

@@ -270,6 +270,9 @@ impl Param {
 		changed
     }
 
+	///! Note: as_str() intentionally ignored because it depends on whether value is an EnumParam or a StringParam
+	///! 	for now, access the value directly instead
+
     pub fn as_float(&self) -> Option<f32> {
         self.value
             .as_any()
