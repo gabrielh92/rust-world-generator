@@ -3,7 +3,7 @@ use crate::pipeline::points::PointsOutput;
 use crate::pipeline::StageDataMap;
 use crate::util::make_stage_data_key;
 use crate::visualization::VisualLayer;
-use egui::{Color32, Painter, Rect, Ui};
+use egui::{Color32, Painter, Ui};
 
 pub struct PointsVisualLayer {
     enabled: bool,

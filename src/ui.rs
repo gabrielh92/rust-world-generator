@@ -1,7 +1,7 @@
 use egui::{CentralPanel, Context, SidePanel};
 
 use crate::canvas::{show_canvas, CanvasData, CanvasLayer};
-use crate::pipeline::{Pipeline, PipelineStage};
+use crate::pipeline::Pipeline;
 use crate::visualization::VisualLayer;
 
 pub struct DebugVisualizer {

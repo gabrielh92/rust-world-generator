@@ -2,7 +2,7 @@ use crate::pipeline::voronoi::VoronoiOutput;
 use crate::pipeline::StageDataMap;
 use crate::util::make_stage_data_key;
 use crate::{params::ParamGroup, visualization::VisualLayer};
-use egui::{Color32, Painter, Pos2, Rect, Stroke, TextBuffer, Ui};
+use egui::{Color32, Painter, Pos2, Stroke, Ui};
 
 #[derive(Default)]
 pub struct VoronoiVisualLayer {

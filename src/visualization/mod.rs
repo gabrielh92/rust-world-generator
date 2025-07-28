@@ -1,6 +1,6 @@
 use crate::params::ParamGroup;
 use crate::pipeline::StageDataMap;
-use egui::{Painter, Rect, Ui};
+use egui::{Painter, Ui};
 
 pub mod points;
 pub mod voronoi;
