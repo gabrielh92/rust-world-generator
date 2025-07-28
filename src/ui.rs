@@ -50,25 +50,25 @@ impl eframe::App for DebugVisualizer {
             }
         });
 
-		// todo: doesn't run at start-up as well
-		if param_changed || canvas_changed {
-			let canvas_data = CanvasData {
-				width: self.canvas_layer.width(),
-				height: self.canvas_layer.height(),
-			};
-			self.pipeline.data.insert("canvas".into(), Box::new(canvas_data));
-			self.pipeline.run();
-		}
-
         // Center canvas
         CentralPanel::default().show(ctx, |ui| {
             if self.canvas_layer.is_enabled() {
                 let (rect, painter) = show_canvas(ui, &self.canvas_layer);
-				self.canvas_layer.draw_canvas(&painter, &rect, None, &self.pipeline.data);
+				self.canvas_layer.draw_canvas(&painter, None, &self.pipeline.data);
+
+				// todo: doesn't run at start-up as well
+				if param_changed || canvas_changed {
+					let canvas_data = CanvasData {
+						width: self.canvas_layer.width() + rect.min.x,
+						height: self.canvas_layer.height() + rect.min.y,
+					};
+					self.pipeline.data.insert("canvas".into(), Box::new(canvas_data));
+					self.pipeline.run();
+				}
 
                 for stage in self.pipeline.stages.iter() {
                     if stage.visual_layer.is_enabled() {
-                        stage.visual_layer.draw_canvas(&painter, &rect, stage.params.as_ref(), &self.pipeline.data);
+                        stage.visual_layer.draw_canvas(&painter, stage.params.as_ref(), &self.pipeline.data);
                     }
                 }
             }

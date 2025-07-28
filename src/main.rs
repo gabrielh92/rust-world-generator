@@ -1,4 +1,5 @@
 mod canvas;
+mod mathlib;
 mod params;
 mod pipeline;
 mod ui;
@@ -8,7 +9,7 @@ mod visualization;
 use eframe::egui;
 use pipeline::Pipeline;
 
-use crate::{pipeline::points::make_points_stage, ui::DebugVisualizer};
+use crate::{pipeline::{points::make_points_stage, voronoi::make_voronoi_stage}, ui::DebugVisualizer};
 
 static DEBUG_APP_NAME: &str = "WorldGen Debug UI";
 
@@ -17,6 +18,8 @@ fn main() -> eframe::Result<()> {
 
 	// 1. todo: add brief description of pipeline stage
 	pipeline.add_stage(make_points_stage());
+	pipeline.add_stage(make_voronoi_stage());
+
 	// todo: add similarly formatted comments for all planned pipeline stages
 
 	let options = eframe::NativeOptions {

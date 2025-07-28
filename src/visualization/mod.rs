@@ -3,6 +3,7 @@ use crate::pipeline::StageDataMap;
 use egui::{Painter, Rect, Ui};
 
 pub mod points;
+pub mod voronoi;
 
 pub trait VisualLayer {
     fn display_name(&self) -> &str;
@@ -16,7 +17,6 @@ pub trait VisualLayer {
     fn draw_canvas(
 		&self,
 		painter: &Painter,
-		rect: &Rect,
 		params: Option<&ParamGroup>,
 		data: &StageDataMap
 	);

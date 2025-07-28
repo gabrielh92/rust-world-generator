@@ -1,6 +1,7 @@
 use rand::Rng;
 
 use crate::canvas::CanvasData;
+use crate::mathlib::vec::Vec2;
 use crate::params::ParamGroup;
 use crate::params::util::build_default_point_params;
 use crate::pipeline::{PipelineStage, PipelineStageExecutor};
@@ -17,7 +18,7 @@ pub fn make_points_stage() -> PipelineStage {
 
 #[derive(Clone, Debug)]
 pub struct PointsOutput {
-	pub points: Vec<egui::Pos2>,
+	pub points: Vec<Vec2>,
 }
 
 impl StageData for PointsOutput {
@@ -59,7 +60,11 @@ impl PipelineStageExecutor for PointsStage {
 			"Random Uniform" | _ => {
 				RandomUniformDistribution.generate_points(count, canvas.width, canvas.height)
 			}
-		};
+		}
+		.into_iter()
+		.map(|p| Vec2::new(p.x, p.y))
+		.collect();
+
         Box::new(PointsOutput { points })
 	}
 }

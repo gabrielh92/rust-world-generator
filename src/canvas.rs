@@ -95,9 +95,7 @@ impl VisualLayer for CanvasLayer {
 		changed_width | changed_height
     }
 
-    fn draw_canvas(&self, painter: &egui::Painter, _rect: &Rect, _params: Option<&ParamGroup>, _data: &StageDataMap) {
-		println!("Drawing canvas for layer: {}", self.display_name());
-
+    fn draw_canvas(&self, painter: &egui::Painter, _params: Option<&ParamGroup>, _data: &StageDataMap) {
         let width = self.width();
         let height = self.height();
         painter.rect_filled(painter.clip_rect(), 0.0, egui::Color32::WHITE);

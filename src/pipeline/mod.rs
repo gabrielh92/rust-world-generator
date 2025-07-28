@@ -4,6 +4,7 @@ use crate::{params::ParamGroup, visualization::VisualLayer};
 use crate::util::make_stage_data_key;
 
 pub mod points;
+pub mod voronoi;
 
 /// The central struct that manages and runs all computation stages in sequence.
 /// Owns both the ordered list of stages and their shared data outputs.

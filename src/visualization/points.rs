@@ -54,7 +54,7 @@ impl VisualLayer for PointsVisualLayer {
 	}
 
 
-    fn draw_canvas(&self, painter: &Painter, rect: &Rect, params: Option<&ParamGroup>, data: &StageDataMap) {
+    fn draw_canvas(&self, painter: &Painter, params: Option<&ParamGroup>, data: &StageDataMap) {
         if !self.enabled {
             return;
         }
@@ -64,11 +64,8 @@ impl VisualLayer for PointsVisualLayer {
 
 		if let Some(output) = data.get(make_stage_data_key("points", 1).as_str()) {
 			if let Some(points) = output.as_any().downcast_ref::<PointsOutput>() {
-				println!("Found {} points to draw", points.points.len());
-				let offset = rect.min.to_vec2(); // top-left corner of canvas
-
 				for pos in &points.points {
-					let canvas_pos = *pos + offset;
+					let canvas_pos = egui::pos2(pos.x, pos.y);
 					painter.circle_filled(canvas_pos, radius, Color32::BLACK);
 				}
 			}
