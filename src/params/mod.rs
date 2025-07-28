@@ -95,7 +95,8 @@ impl ParamValue for FloatParam {
             egui::Slider::new(&mut self.val, self.min..=self.max)
                 .step_by(self.step as f64)
                 .text(""),
-        ).changed()
+        )
+        .changed()
     }
 
     fn as_str(&self) -> &str {
@@ -130,7 +131,8 @@ impl ParamValue for IntParam {
             egui::Slider::new(&mut self.val, self.min..=self.max)
                 .step_by(self.step as f64)
                 .text(""),
-        ).changed()
+        )
+        .changed()
     }
 
     fn as_str(&self) -> &str {
@@ -189,14 +191,14 @@ impl ParamValue for StringParam {
 // enum param
 #[derive(Debug)]
 pub struct EnumParam {
-	pub options: Vec<String>,
-	pub selected: usize,
+    pub options: Vec<String>,
+    pub selected: usize,
 }
 
 impl ParamValue for EnumParam {
-	fn draw(&mut self, ui: &mut egui::Ui) -> bool {
-		let mut changed = false;
-		let current = self.selected;
+    fn draw(&mut self, ui: &mut egui::Ui) -> bool {
+        let mut changed = false;
+        let current = self.selected;
 
         egui::ComboBox::from_id_source(ui.id().with("enum_param"))
             .selected_text(&self.options[current])
@@ -208,18 +210,18 @@ impl ParamValue for EnumParam {
                     }
                 }
             });
-		changed
-	}
+        changed
+    }
 
-	fn as_str(&self) -> &str {
-		&self.options[self.selected]
-	}
+    fn as_str(&self) -> &str {
+        &self.options[self.selected]
+    }
 
-	fn as_bool(&self) -> &bool {
-		panic!("EnumParam has no bool value")
-	}
+    fn as_bool(&self) -> &bool {
+        panic!("EnumParam has no bool value")
+    }
 
-	fn as_int(&self) -> &usize {
+    fn as_int(&self) -> &usize {
         &self.selected
     }
 
@@ -256,7 +258,7 @@ pub struct Param {
 
 impl Param {
     pub fn draw(&mut self, ui: &mut egui::Ui) -> bool {
-		let mut changed = false;
+        let mut changed = false;
         ui.horizontal(|ui| {
             let label = egui::RichText::new(&self.name).strong();
             if let Some(tt) = &self.tooltip {
@@ -267,11 +269,11 @@ impl Param {
 
             changed = self.value.draw(ui);
         });
-		changed
+        changed
     }
 
-	///! Note: as_str() intentionally ignored because it depends on whether value is an EnumParam or a StringParam
-	///! 	for now, access the value directly instead
+    ///! Note: as_str() intentionally ignored because it depends on whether value is an EnumParam or a StringParam
+    ///! 	for now, access the value directly instead
 
     pub fn as_float(&self) -> Option<f32> {
         self.value

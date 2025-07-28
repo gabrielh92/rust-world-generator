@@ -8,19 +8,31 @@ pub struct ParamGroupBuilder {
 }
 
 impl ParamGroupBuilder {
-	pub fn new(title: impl Into<String>) -> Self {
-		Self {
-			title: title.into(),
-			enabled: true,
-			params: vec![],
-		}
-	}
+    pub fn new(title: impl Into<String>) -> Self {
+        Self {
+            title: title.into(),
+            enabled: true,
+            params: vec![],
+        }
+    }
 
-    pub fn int_param(mut self, name: impl Into<String>, val: usize, min: usize, max: usize, step: usize) -> Self {
+    pub fn int_param(
+        mut self,
+        name: impl Into<String>,
+        val: usize,
+        min: usize,
+        max: usize,
+        step: usize,
+    ) -> Self {
         self.params.push(Param {
             name: name.into(),
             tooltip: None,
-            value: Box::new(IntParam { val, min, max, step }),
+            value: Box::new(IntParam {
+                val,
+                min,
+                max,
+                step,
+            }),
         });
         self
     }
@@ -34,25 +46,42 @@ impl ParamGroupBuilder {
         self
     }
 
-    pub fn float_param(mut self, name: impl Into<String>, val: f32, min: f32, max: f32, step: f32) -> Self {
+    pub fn float_param(
+        mut self,
+        name: impl Into<String>,
+        val: f32,
+        min: f32,
+        max: f32,
+        step: f32,
+    ) -> Self {
         self.params.push(Param {
             name: name.into(),
             tooltip: None,
-            value: Box::new(FloatParam { val, min, max, step }),
+            value: Box::new(FloatParam {
+                val,
+                min,
+                max,
+                step,
+            }),
         });
         self
     }
 
-	pub fn enum_param(mut self, name: impl Into<String>, options: Vec<String>, selected: usize) -> Self {
-		self.params.push(Param {
-			name: name.into(),
-			tooltip: None,
-			value: Box::new(EnumParam { options, selected })
-		});
-		self
-	}
+    pub fn enum_param(
+        mut self,
+        name: impl Into<String>,
+        options: Vec<String>,
+        selected: usize,
+    ) -> Self {
+        self.params.push(Param {
+            name: name.into(),
+            tooltip: None,
+            value: Box::new(EnumParam { options, selected }),
+        });
+        self
+    }
 
-	pub fn with_tooltip(mut self, tooltip: impl Into<String>) -> Self {
+    pub fn with_tooltip(mut self, tooltip: impl Into<String>) -> Self {
         if let Some(last) = self.params.last_mut() {
             last.tooltip = Some(tooltip.into());
         }

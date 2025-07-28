@@ -14,10 +14,5 @@ pub trait VisualLayer {
     fn draw_controls(&mut self, ui: &mut Ui, params: Option<&mut ParamGroup>) -> bool;
 
     /// Draws onto canvas using outputs from pipeline
-    fn draw_canvas(
-		&self,
-		painter: &Painter,
-		params: Option<&ParamGroup>,
-		data: &StageDataMap
-	);
+    fn draw_canvas(&self, painter: &Painter, params: Option<&ParamGroup>, data: &StageDataMap);
 }

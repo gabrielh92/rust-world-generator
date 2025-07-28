@@ -1,20 +1,18 @@
-use crate::util::make_stage_data_key;
-use crate::pipeline::StageDataMap;
-use crate::visualization::VisualLayer;
-use egui::{Color32, Painter, Rect, Ui};
 use crate::params::ParamGroup;
 use crate::pipeline::points::PointsOutput;
+use crate::pipeline::StageDataMap;
+use crate::util::make_stage_data_key;
+use crate::visualization::VisualLayer;
+use egui::{Color32, Painter, Rect, Ui};
 
 pub struct PointsVisualLayer {
-	enabled: bool,
+    enabled: bool,
 }
 
 impl Default for PointsVisualLayer {
-	fn default() -> Self {
-		Self {
-			enabled: false,
-		}
-	}
+    fn default() -> Self {
+        Self { enabled: false }
+    }
 }
 
 impl VisualLayer for PointsVisualLayer {
@@ -30,45 +28,47 @@ impl VisualLayer for PointsVisualLayer {
         self.enabled = enabled;
     }
 
-	fn draw_controls(&mut self, ui: &mut Ui, params: Option<&mut ParamGroup>) -> bool {
-		let mut changed = false;
+    fn draw_controls(&mut self, ui: &mut Ui, params: Option<&mut ParamGroup>) -> bool {
+        let mut changed = false;
 
-		let name = self.display_name().to_string();
-		let enabled = &mut self.enabled;
+        let name = self.display_name().to_string();
+        let enabled = &mut self.enabled;
 
-		ui.collapsing(name, |ui| {
-			changed |= ui.checkbox(enabled, "Enabled").changed();
+        ui.collapsing(name, |ui| {
+            changed |= ui.checkbox(enabled, "Enabled").changed();
 
-			if *enabled {
-				if let Some(p) = params {
-					// Don't call p.draw_controls(ui), because it includes its own collapsible.
-					// Instead, draw just the inner fields manually:
-					for param in &mut p.params {
-						changed |= param.draw(ui);
-					}
-				}
-			}
-		});
+            if *enabled {
+                if let Some(p) = params {
+                    // Don't call p.draw_controls(ui), because it includes its own collapsible.
+                    // Instead, draw just the inner fields manually:
+                    for param in &mut p.params {
+                        changed |= param.draw(ui);
+                    }
+                }
+            }
+        });
 
-		changed
-	}
-
+        changed
+    }
 
     fn draw_canvas(&self, painter: &Painter, params: Option<&ParamGroup>, data: &StageDataMap) {
         if !self.enabled {
             return;
         }
 
-		let params = params.unwrap();
-        let radius = params.get_param("Point Radius").and_then(|p| p.as_float()).unwrap();
+        let params = params.unwrap();
+        let radius = params
+            .get_param("Point Radius")
+            .and_then(|p| p.as_float())
+            .unwrap();
 
-		if let Some(output) = data.get(make_stage_data_key("points", 1).as_str()) {
-			if let Some(points) = output.as_any().downcast_ref::<PointsOutput>() {
-				for pos in &points.points {
-					let canvas_pos = egui::pos2(pos.x, pos.y);
-					painter.circle_filled(canvas_pos, radius, Color32::BLACK);
-				}
-			}
-		}
+        if let Some(output) = data.get(make_stage_data_key("points", 1).as_str()) {
+            if let Some(points) = output.as_any().downcast_ref::<PointsOutput>() {
+                for pos in &points.points {
+                    let canvas_pos = egui::pos2(pos.x, pos.y);
+                    painter.circle_filled(canvas_pos, radius, Color32::BLACK);
+                }
+            }
+        }
     }
 }

@@ -1,7 +1,7 @@
+use crate::pipeline::voronoi::VoronoiOutput;
+use crate::pipeline::StageDataMap;
 use crate::util::make_stage_data_key;
 use crate::{params::ParamGroup, visualization::VisualLayer};
-use crate::pipeline::StageDataMap;
-use crate::pipeline::voronoi::VoronoiOutput;
 use egui::{Color32, Painter, Pos2, Rect, Stroke, TextBuffer, Ui};
 
 #[derive(Default)]
@@ -10,10 +10,16 @@ pub struct VoronoiVisualLayer {
 }
 
 impl VisualLayer for VoronoiVisualLayer {
-    fn display_name(&self) -> &str { "Voronoi Layer" }
+    fn display_name(&self) -> &str {
+        "Voronoi Layer"
+    }
 
-    fn is_enabled(&self) -> bool { self.enabled }
-    fn set_enabled(&mut self, e: bool) { self.enabled = e }
+    fn is_enabled(&self) -> bool {
+        self.enabled
+    }
+    fn set_enabled(&mut self, e: bool) {
+        self.enabled = e
+    }
 
     fn draw_controls(&mut self, ui: &mut Ui, _params: Option<&mut ParamGroup>) -> bool {
         ui.checkbox(&mut self.enabled, "Enabled").changed()
@@ -27,7 +33,9 @@ impl VisualLayer for VoronoiVisualLayer {
         if let Some(output) = data.get(&make_stage_data_key("voronoi", 2)) {
             if let Some(voronoi) = output.as_any().downcast_ref::<VoronoiOutput>() {
                 for cell in &voronoi.cells {
-                    let region = cell.vertices.iter()
+                    let region = cell
+                        .vertices
+                        .iter()
                         .map(|v| Pos2::new(v.x, v.y))
                         .collect::<Vec<_>>();
 

@@ -6,14 +6,14 @@ use crate::visualization::VisualLayer;
 
 #[derive(Clone, Debug)]
 pub struct CanvasData {
-	pub width: f32,
-	pub height: f32,
+    pub width: f32,
+    pub height: f32,
 }
 
 impl StageData for CanvasData {
-	fn as_any(&self) -> &dyn std::any::Any {
-		self
-	}
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 pub struct CanvasLayer {
@@ -83,19 +83,32 @@ impl VisualLayer for CanvasLayer {
     }
 
     fn draw_controls(&mut self, ui: &mut egui::Ui, _params: Option<&mut ParamGroup>) -> bool {
-		let (mut changed_width, mut changed_height) = (false, false);
+        let (mut changed_width, mut changed_height) = (false, false);
         let name = self.display_name().to_string();
         ui.collapsing(name, |ui| {
             ui.checkbox(&mut self.is_enabled(), "Enabled");
             if self.is_enabled() {
-                changed_width = self.config.get_param_mut("width").map(|p| p.draw(ui)).unwrap_or(false);
-                changed_height = self.config.get_param_mut("height").map(|p| p.draw(ui)).unwrap_or(false);
+                changed_width = self
+                    .config
+                    .get_param_mut("width")
+                    .map(|p| p.draw(ui))
+                    .unwrap_or(false);
+                changed_height = self
+                    .config
+                    .get_param_mut("height")
+                    .map(|p| p.draw(ui))
+                    .unwrap_or(false);
             }
         });
-		changed_width | changed_height
+        changed_width | changed_height
     }
 
-    fn draw_canvas(&self, painter: &egui::Painter, _params: Option<&ParamGroup>, _data: &StageDataMap) {
+    fn draw_canvas(
+        &self,
+        painter: &egui::Painter,
+        _params: Option<&ParamGroup>,
+        _data: &StageDataMap,
+    ) {
         let width = self.width();
         let height = self.height();
         painter.rect_filled(painter.clip_rect(), 0.0, egui::Color32::WHITE);
@@ -117,7 +130,7 @@ pub fn show_canvas(ui: &mut Ui, canvas_layer: &CanvasLayer) -> (Rect, Painter) {
 
     // Optional: Draw a dark background for visibility
     painter.rect_filled(response.rect, 0.0, Color32::WHITE);
-	painter.rect_stroke(response.rect, 0.0, egui::Stroke::new(1.0, Color32::RED));
+    painter.rect_stroke(response.rect, 0.0, egui::Stroke::new(1.0, Color32::RED));
 
     (response.rect, painter)
 }

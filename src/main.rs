@@ -9,30 +9,27 @@ mod visualization;
 use eframe::egui;
 use pipeline::Pipeline;
 
-use crate::{pipeline::{points::make_points_stage, voronoi::make_voronoi_stage}, ui::DebugVisualizer};
+use crate::{
+    pipeline::{points::make_points_stage, voronoi::make_voronoi_stage},
+    ui::DebugVisualizer,
+};
 
 static DEBUG_APP_NAME: &str = "WorldGen Debug UI";
 
 fn main() -> eframe::Result<()> {
-	let mut pipeline = Pipeline::new();
+    let mut pipeline = Pipeline::new();
 
-	// 1. todo: add brief description of pipeline stage
-	pipeline.add_stage(make_points_stage());
-	pipeline.add_stage(make_voronoi_stage());
+    // 1. todo: add brief description of pipeline stage
+    pipeline.add_stage(make_points_stage());
+    pipeline.add_stage(make_voronoi_stage());
 
-	// todo: add similarly formatted comments for all planned pipeline stages
+    // todo: add similarly formatted comments for all planned pipeline stages
 
-	let options = eframe::NativeOptions {
+    let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_title(DEBUG_APP_NAME),
         ..Default::default()
     };
 
-	let app = DebugVisualizer::new(pipeline);
-    eframe::run_native(
-        DEBUG_APP_NAME,
-        options,
-        Box::new(|_cc| {
-			Box::new(app)
-		}),
-	)
+    let app = DebugVisualizer::new(pipeline);
+    eframe::run_native(DEBUG_APP_NAME, options, Box::new(|_cc| Box::new(app)))
 }
