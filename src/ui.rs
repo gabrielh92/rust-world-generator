@@ -1,6 +1,7 @@
 use egui::{CentralPanel, Context, SidePanel};
 
 use crate::canvas::{show_canvas, CanvasData, CanvasLayer};
+use crate::mathlib::vec::Vec2;
 use crate::pipeline::Pipeline;
 use crate::visualization::VisualLayer;
 
@@ -19,6 +20,7 @@ impl DebugVisualizer {
             Box::new(CanvasData {
                 width: canvas_layer.width(),
                 height: canvas_layer.height(),
+				center: Vec2 { x: canvas_layer.width() / 2., y: canvas_layer.height() / 2. }
             }),
         );
 
@@ -58,9 +60,12 @@ impl eframe::App for DebugVisualizer {
 
                 // todo: doesn't run at start-up as well
                 if param_changed || canvas_changed {
+					let w = self.canvas_layer.width() + rect.min.x;
+					let h = self.canvas_layer.height() + rect.min.y;
                     let canvas_data = CanvasData {
-                        width: self.canvas_layer.width() + rect.min.x,
-                        height: self.canvas_layer.height() + rect.min.y,
+                        width: w,
+                        height: h,
+						center: Vec2 { x: w / 2., y: h / 2. }
                     };
                     self.pipeline
                         .data

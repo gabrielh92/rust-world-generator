@@ -4,6 +4,7 @@ use egui::{Painter, Ui};
 
 pub mod points;
 pub mod voronoi;
+pub mod landmass;
 
 pub trait VisualLayer {
     fn display_name(&self) -> &str;

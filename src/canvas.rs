@@ -1,5 +1,6 @@
-use egui::{Color32, Painter, Rect, Sense, Ui, Vec2};
+use egui::{Color32, Painter, Rect, Sense, Ui};
 
+use crate::mathlib::vec::Vec2;
 use crate::params::{FloatParam, Param, ParamGroup};
 use crate::pipeline::{StageData, StageDataMap};
 use crate::visualization::VisualLayer;
@@ -8,6 +9,7 @@ use crate::visualization::VisualLayer;
 pub struct CanvasData {
     pub width: f32,
     pub height: f32,
+	pub center: Vec2,
 }
 
 impl StageData for CanvasData {
@@ -123,7 +125,7 @@ impl VisualLayer for CanvasLayer {
 }
 
 pub fn show_canvas(ui: &mut Ui, canvas_layer: &CanvasLayer) -> (Rect, Painter) {
-    let canvas_size = Vec2::new(canvas_layer.width(), canvas_layer.height());
+    let canvas_size = egui::Vec2::new(canvas_layer.width(), canvas_layer.height());
 
     // Allocate painter space in the central panel
     let (response, painter) = ui.allocate_painter(canvas_size, Sense::hover());

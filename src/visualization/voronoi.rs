@@ -22,7 +22,14 @@ impl VisualLayer for VoronoiVisualLayer {
     }
 
     fn draw_controls(&mut self, ui: &mut Ui, _params: Option<&mut ParamGroup>) -> bool {
-        ui.checkbox(&mut self.enabled, "Enabled").changed()
+		let mut changed = false;
+		let name = self.display_name().to_string();
+
+		ui.collapsing(name, |ui| {
+			changed |= ui.checkbox(&mut self.enabled, "Enabled").changed();
+		});
+
+		changed
     }
 
     fn draw_canvas(&self, painter: &Painter, _params: Option<&ParamGroup>, data: &StageDataMap) {

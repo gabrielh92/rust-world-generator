@@ -5,6 +5,7 @@ use crate::{params::ParamGroup, visualization::VisualLayer};
 
 pub mod points;
 pub mod voronoi;
+pub mod landmass;
 
 /// The central struct that manages and runs all computation stages in sequence.
 /// Owns both the ordered list of stages and their shared data outputs.

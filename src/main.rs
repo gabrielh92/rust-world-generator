@@ -10,7 +10,7 @@ use eframe::egui;
 use pipeline::Pipeline;
 
 use crate::{
-    pipeline::{points::make_points_stage, voronoi::make_voronoi_stage},
+    pipeline::{landmass::make_landmass_stage, points::make_points_stage, voronoi::make_voronoi_stage},
     ui::DebugVisualizer,
 };
 
@@ -22,6 +22,7 @@ fn main() -> eframe::Result<()> {
     // 1. todo: add brief description of pipeline stage
     pipeline.add_stage(make_points_stage());
     pipeline.add_stage(make_voronoi_stage());
+	pipeline.add_stage(make_landmass_stage());
 
     // todo: add similarly formatted comments for all planned pipeline stages
 
