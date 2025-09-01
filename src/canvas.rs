@@ -125,6 +125,7 @@ impl VisualLayer for CanvasLayer {
 }
 
 pub fn show_canvas(ui: &mut Ui, canvas_layer: &CanvasLayer) -> (Rect, Painter) {
+	// todo: draw a margin on the canvas and bounds to verify that there's no accidental overflow
     let canvas_size = egui::Vec2::new(canvas_layer.width(), canvas_layer.height());
 
     // Allocate painter space in the central panel

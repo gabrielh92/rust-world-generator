@@ -55,11 +55,10 @@ impl PipelineStageExecutor for LandmassStage {
 			.and_then(|d| d.as_any().downcast_ref::<VoronoiOutput>())
 			.expect("Voronoi data must exist for landmass definition");
 
-		let canvas_center = data
+		let canvas = data
 			.get("canvas")
 			.and_then(|c| c.as_any().downcast_ref::<CanvasData>())
-			.expect("Canvas data defined for landmass generation")
-			.center;
+			.expect("Canvas data defined for landmass generation");
 
 		let (size_x, size_y, rotation) = if let Some(pg) = params {
 			(
@@ -81,6 +80,14 @@ impl PipelineStageExecutor for LandmassStage {
 			panic!("Landmass parameters undefined")
 		};
 
+		let scale = if let Some(pg) = params {
+			(
+				pg.get_param("Scale").and_then(|p| p.as_float()).unwrap()
+			)
+		} else {
+			panic!("Landmass parameters undefined")
+		};
+
 		// todo: rotation factor in param doesn't match what's happening- landmass rotates by way more
 		let cos_t = rotation.cos();
 		let sin_t = rotation.sin();
@@ -92,16 +99,20 @@ impl PipelineStageExecutor for LandmassStage {
             // Cell center = average of vertices
 			let local_center = LandmassStage::average_point(&cell.vertices);
 
-			// todo: fix this magic 1.25 that centers the landmass - likely voronoi points are offset
-            let cx = local_center.x - canvas_center.x;
-            let cy = local_center.y - canvas_center.y;
+			// todo: properly center landmass, it's offset left for some reason
+            let cx = local_center.x - canvas.center.x;
+            let cy = local_center.y - canvas.center.y;
 
             // Rotate
             let xr = cx * cos_t + cy * sin_t;
             let yr = -cx * sin_t + cy * cos_t;
 
+			// Apply Scale
+			let sx = size_x * scale;
+			let sy = size_y * scale;
+
             // Elliptical distance
-            let d = ((xr / size_x).powi(2) + (yr / size_y).powi(2)).sqrt();
+            let d = ((xr / (sx / 2.0)).powi(2) + (yr / (sy / 2.0)).powi(2)).sqrt();
 
             // Falloff elevation
             let mut elevation = 1.0 - d;
@@ -109,7 +120,11 @@ impl PipelineStageExecutor for LandmassStage {
 			// Add noise
 			let n = LandmassStage::simple_noise(local_center.x, local_center.y, noise_scale);
 			elevation += noise_amplitude * n;
-            cells.push(LandmassCell { center: local_center, elevation });
+
+			// todo: fix edge detection so land doesn't touch the edge of the canvas
+			//elevation = if LandmassStage::is_cell_at_edge(&local_center, canvas.width, canvas.height) { 0. } else {elevation};
+
+			cells.push(LandmassCell { center: local_center, elevation });
         }
 
 		Box::new(LandmassOutput { cells })
@@ -126,5 +141,9 @@ impl LandmassStage {
 	fn simple_noise(x: f32, y: f32, scale: f32) -> f32 {
 		let s = scale;
 		((x * s).sin() * (y * s).cos()) as f32 // deterministic pseudo-noise
+	}
+
+	fn is_cell_at_edge(coord: &Vec2, width: f32, height: f32) -> bool {
+		coord.x <= 0.0 || coord.x >= width || coord.y <= 0.0 || coord.y >= height
 	}
 }

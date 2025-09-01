@@ -20,6 +20,7 @@ pub fn build_default_point_params() -> ParamGroup {
 
 pub fn build_default_landmass_params() -> ParamGroup {
 	ParamGroupBuilder::new("Landmass")
+		.float_param("Scale", 1., 0.1, 10., 0.1)
 		.float_param("X Size", 150., 50., 1000., 10.)
 		.float_param("Y Size", 150., 50., 1000., 10.)
 		.float_param("Rotation", 0., 0., 360., 5.)
