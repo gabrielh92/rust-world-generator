@@ -3,7 +3,7 @@ use voronoice::{BoundingBox, VoronoiBuilder};
 use crate::{
     canvas::CanvasData,
     mathlib::vec::Vec2,
-    params::ParamGroup,
+    params::{util::build_default_voronoi_params, ParamGroup},
     pipeline::{
         points::PointsOutput, PipelineStage, PipelineStageExecutor, StageData, StageDataMap,
     },
@@ -14,7 +14,7 @@ use crate::{
 pub fn make_voronoi_stage() -> PipelineStage {
     PipelineStage {
         executor: Box::new(VoronoiStage::default()),
-        params: None,
+        params: Some(build_default_voronoi_params()),
         visual_layer: Box::new(VoronoiVisualLayer::default()),
     }
 }
@@ -46,8 +46,14 @@ impl PipelineStageExecutor for VoronoiStage {
         2
     }
 
-    fn run(&mut self, _params: Option<&ParamGroup>, data: &StageDataMap) -> Box<dyn StageData> {
-        let canvas = data
+    fn run(&mut self, params: Option<&ParamGroup>, data: &StageDataMap) -> Box<dyn StageData> {
+		let iterations = params
+			.expect("Expected voronoi params")
+			.get_param("Lloyd Relaxations")
+			.and_then(|p| p.as_int())
+			.unwrap();
+
+		let canvas = data
             .get("canvas")
             .and_then(|d| d.as_any().downcast_ref::<CanvasData>())
             .unwrap();
@@ -65,6 +71,7 @@ impl PipelineStageExecutor for VoronoiStage {
                 y: p.y as f64,
             })
             .collect();
+
         let diagram = VoronoiBuilder::default()
             .set_sites(input_points)
             .set_bounding_box(BoundingBox::new(
@@ -72,6 +79,7 @@ impl PipelineStageExecutor for VoronoiStage {
                 canvas.width.into(),
                 canvas.height.into(),
             ))
+			.set_lloyd_relaxation_iterations(iterations)
             .build()
             .expect("Failed to build Voronoi diagram");
 

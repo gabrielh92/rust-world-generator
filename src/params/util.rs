@@ -18,6 +18,13 @@ pub fn build_default_point_params() -> ParamGroup {
         .build()
 }
 
+pub fn build_default_voronoi_params() -> ParamGroup {
+	ParamGroupBuilder::new("Voronoi")
+		.int_param("Lloyd Relaxations", 1, 1, 10, 1)
+			.with_tooltip("Set iterations of applied Lloyd relaxations")
+		.build()
+}
+
 pub fn build_default_landmass_params() -> ParamGroup {
 	ParamGroupBuilder::new("Landmass")
 		.float_param("Scale", 1., 0.1, 10., 0.1)
