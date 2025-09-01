@@ -10,6 +10,13 @@ impl Vec2 {
     }
 }
 
+impl From<Vec2> for egui::Vec2 {
+	fn from(v: Vec2) -> Self {
+		egui::Vec2 { x: v.x, y: v.y }
+	}
+}
+
+
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,

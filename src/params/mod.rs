@@ -254,6 +254,7 @@ pub struct Param {
     pub name: String,
     pub tooltip: Option<String>,
     pub value: Box<dyn ParamValue>,
+	// pub trigger: bool, // todo: add functionality to have params trigger regen and for params to not
 }
 
 impl Param {

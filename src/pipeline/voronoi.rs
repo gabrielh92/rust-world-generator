@@ -68,10 +68,7 @@ impl PipelineStageExecutor for VoronoiStage {
         let diagram = VoronoiBuilder::default()
             .set_sites(input_points)
             .set_bounding_box(BoundingBox::new(
-                voronoice::Point {
-                    x: (canvas.width / 2.).into(),
-                    y: (canvas.height / 2.).into(),
-                },
+                voronoice::Point { x: (canvas.width / 2.).into(), y: (canvas.height / 2.).into() },
                 canvas.width.into(),
                 canvas.height.into(),
             ))

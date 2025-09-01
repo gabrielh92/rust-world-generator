@@ -55,13 +55,9 @@ impl PipelineStageExecutor for LandmassStage {
 			.and_then(|d| d.as_any().downcast_ref::<VoronoiOutput>())
 			.expect("Voronoi data must exist for landmass definition");
 
-		let canvas = data
-			.get("canvas")
-			.and_then(|c| c.as_any().downcast_ref::<CanvasData>())
-			.expect("Canvas data defined for landmass generation");
-
-		let (size_x, size_y, rotation) = if let Some(pg) = params {
+		let (scale, size_x, size_y, rotation) = if let Some(pg) = params {
 			(
+				pg.get_param("Scale").and_then(|p| p.as_float()).unwrap(),
 				pg.get_param("X Size").and_then(|p| p.as_float()).unwrap(),
 				pg.get_param("Y Size").and_then(|p| p.as_float()).unwrap(),
 				pg.get_param("Rotation").and_then(|p| p.as_float()).unwrap(),
@@ -80,14 +76,6 @@ impl PipelineStageExecutor for LandmassStage {
 			panic!("Landmass parameters undefined")
 		};
 
-		let scale = if let Some(pg) = params {
-			(
-				pg.get_param("Scale").and_then(|p| p.as_float()).unwrap()
-			)
-		} else {
-			panic!("Landmass parameters undefined")
-		};
-
 		// todo: rotation factor in param doesn't match what's happening- landmass rotates by way more
 		let cos_t = rotation.cos();
 		let sin_t = rotation.sin();
@@ -100,8 +88,8 @@ impl PipelineStageExecutor for LandmassStage {
 			let local_center = LandmassStage::average_point(&cell.vertices);
 
 			// todo: properly center landmass, it's offset left for some reason
-            let cx = local_center.x - canvas.center.x;
-            let cy = local_center.y - canvas.center.y;
+            let cx = local_center.x;
+            let cy = local_center.y;
 
             // Rotate
             let xr = cx * cos_t + cy * sin_t;
@@ -115,9 +103,11 @@ impl PipelineStageExecutor for LandmassStage {
             let d = ((xr / (sx / 2.0)).powi(2) + (yr / (sy / 2.0)).powi(2)).sqrt();
 
             // Falloff elevation
+			// todo: maybe make this exponential s.t. we never reach the edge
             let mut elevation = 1.0 - d;
 
 			// Add noise
+			// todo: update into a better shape generation function
 			let n = LandmassStage::simple_noise(local_center.x, local_center.y, noise_scale);
 			elevation += noise_amplitude * n;
 

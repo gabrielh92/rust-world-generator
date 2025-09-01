@@ -1,6 +1,6 @@
-use egui::{CentralPanel, Context, SidePanel};
+use egui::{CentralPanel, Context, Sense, SidePanel};
 
-use crate::canvas::{show_canvas, CanvasData, CanvasLayer};
+use crate::canvas::{CanvasData, CanvasLayer};
 use crate::mathlib::vec::Vec2;
 use crate::pipeline::Pipeline;
 use crate::visualization::VisualLayer;
@@ -11,18 +11,8 @@ pub struct DebugVisualizer {
 }
 
 impl DebugVisualizer {
-    pub fn new(mut pipeline: Pipeline) -> Self {
+    pub fn new(pipeline: Pipeline) -> Self {
         let canvas_layer = CanvasLayer::default();
-
-        // Insert canvas data as the first pipeline data entry
-        pipeline.data.insert(
-            "canvas".into(),
-            Box::new(CanvasData {
-                width: canvas_layer.width(),
-                height: canvas_layer.height(),
-				center: Vec2 { x: canvas_layer.width() / 2., y: canvas_layer.height() / 2. }
-            }),
-        );
 
         Self {
             canvas_layer,
@@ -53,36 +43,40 @@ impl eframe::App for DebugVisualizer {
 
         // Center canvas
         CentralPanel::default().show(ctx, |ui| {
-            if self.canvas_layer.is_enabled() {
-                let (rect, painter) = show_canvas(ui, &self.canvas_layer);
-                self.canvas_layer
-                    .draw_canvas(&painter, None, &self.pipeline.data);
+            if !self.canvas_layer.is_enabled() {
+				return;
+			}
 
-                // todo: doesn't run at start-up as well
-                if param_changed || canvas_changed {
-					let w = self.canvas_layer.width() + rect.min.x;
-					let h = self.canvas_layer.height() + rect.min.y;
-                    let canvas_data = CanvasData {
-                        width: w,
-                        height: h,
-						center: Vec2 { x: w / 2., y: h / 2. }
-                    };
-                    self.pipeline
-                        .data
-                        .insert("canvas".into(), Box::new(canvas_data));
-                    self.pipeline.run();
-                }
+			let panel_size = ui.available_size();
+			let (response, painter) = ui.allocate_painter(panel_size, Sense::hover());
+			let panel_rect = response.rect;
 
-                for stage in self.pipeline.stages.iter() {
-                    if stage.visual_layer.is_enabled() {
-                        stage.visual_layer.draw_canvas(
-                            &painter,
-                            stage.params.as_ref(),
-                            &self.pipeline.data,
-                        );
-                    }
-                }
-            }
-        });
+			self.canvas_layer.draw_canvas(&painter, &panel_rect, None, &self.pipeline.data);
+
+			// Add canvas data into pipeline data
+			let w = self.canvas_layer.width();
+			let h = self.canvas_layer.height();
+			let c = Vec2 { x: panel_rect.center().x, y: panel_rect.center().y };
+			self.pipeline.data.insert(
+				"canvas".into(),
+				Box::new(CanvasData { width: w, height: h, center: c })
+			);
+
+			// todo: doesn't run at start-up as well
+			if param_changed || canvas_changed {
+				self.pipeline.run();
+			}
+
+			for stage in self.pipeline.stages.iter() {
+				if stage.visual_layer.is_enabled() {
+					stage.visual_layer.draw_canvas(
+						&painter,
+						&panel_rect,
+						stage.params.as_ref(),
+						&self.pipeline.data,
+					);
+				}
+			}
+		});
     }
 }

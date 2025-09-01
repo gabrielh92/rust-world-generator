@@ -15,6 +15,8 @@ use crate::{
 };
 
 static DEBUG_APP_NAME: &str = "WorldGen Debug UI";
+static WINDOW_WIDTH: f32 = 1800.;
+static WINDOW_HEIGHT: f32 = 1200.;
 
 fn main() -> eframe::Result<()> {
     let mut pipeline = Pipeline::new();
@@ -27,7 +29,10 @@ fn main() -> eframe::Result<()> {
     // todo: add similarly formatted comments for all planned pipeline stages
 
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_title(DEBUG_APP_NAME),
+        viewport: egui::ViewportBuilder::default()
+		.with_title(DEBUG_APP_NAME)
+		.with_inner_size(egui::Vec2 {x: WINDOW_WIDTH, y: WINDOW_HEIGHT}),
+
         ..Default::default()
     };
 

@@ -1,9 +1,9 @@
-use egui::{Color32, Painter, Rect, Sense, Ui};
+use egui::{Painter, Rect, Sense, Ui};
 
 use crate::mathlib::vec::Vec2;
 use crate::params::{FloatParam, Param, ParamGroup};
 use crate::pipeline::{StageData, StageDataMap};
-use crate::visualization::VisualLayer;
+use crate::visualization::{ColorKey, VisualLayer};
 
 #[derive(Clone, Debug)]
 pub struct CanvasData {
@@ -105,35 +105,17 @@ impl VisualLayer for CanvasLayer {
         changed_width | changed_height
     }
 
-    fn draw_canvas(
-        &self,
-        painter: &egui::Painter,
-        _params: Option<&ParamGroup>,
-        _data: &StageDataMap,
-    ) {
-        let width = self.width();
-        let height = self.height();
-        painter.rect_filled(painter.clip_rect(), 0.0, egui::Color32::WHITE);
-        painter.text(
-            egui::pos2(10.0, 10.0),
-            egui::Align2::LEFT_TOP,
-            format!("Canvas: {width} x {height}"),
-            egui::FontId::monospace(14.0),
-            Color32::DARK_GRAY,
-        );
-    }
-}
+    fn draw_canvas(&self, painter: &egui::Painter, rect: &Rect, _params: Option<&ParamGroup>, data: &StageDataMap) {
+		let canvas_size = egui::Vec2 { x: self.width(), y: self.height() };
+		let canvas_rect = egui::Rect::from_center_size(rect.center(), canvas_size);
 
-pub fn show_canvas(ui: &mut Ui, canvas_layer: &CanvasLayer) -> (Rect, Painter) {
-	// todo: draw a margin on the canvas and bounds to verify that there's no accidental overflow
-    let canvas_size = egui::Vec2::new(canvas_layer.width(), canvas_layer.height());
+		let backdrop_size = canvas_size * 1.25;
+		let backdrop_rect = Rect::from_center_size(rect.center(), backdrop_size);
 
-    // Allocate painter space in the central panel
-    let (response, painter) = ui.allocate_painter(canvas_size, Sense::hover());
+		// === Draw backdrop frame ===
+		painter.rect_filled(backdrop_rect, 0.0, ColorKey::CanvasBackdrop.egui32());
 
-    // Optional: Draw a dark background for visibility
-    painter.rect_filled(response.rect, 0.0, Color32::WHITE);
-    painter.rect_stroke(response.rect, 0.0, egui::Stroke::new(1.0, Color32::RED));
-
-    (response.rect, painter)
+		// === Draw main canvas background ===
+		painter.rect_filled(canvas_rect, 0.0, ColorKey::Canvas.egui32());
+	}
 }

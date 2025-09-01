@@ -1,9 +1,10 @@
-use crate::params::ParamGroup;
+use crate::canvas::CanvasData;
+use crate::{params::ParamGroup, visualization::ColorKey};
 use crate::pipeline::points::PointsOutput;
 use crate::pipeline::StageDataMap;
 use crate::util::make_stage_data_key;
 use crate::visualization::VisualLayer;
-use egui::{Color32, Painter, Ui};
+use egui::{Painter, Rect, Ui};
 
 pub struct PointsVisualLayer {
     enabled: bool,
@@ -51,22 +52,30 @@ impl VisualLayer for PointsVisualLayer {
         changed
     }
 
-    fn draw_canvas(&self, painter: &Painter, params: Option<&ParamGroup>, data: &StageDataMap) {
+    fn draw_canvas(&self, painter: &Painter, rect: &Rect, params: Option<&ParamGroup>, data: &StageDataMap) {
         if !self.enabled {
             return;
         }
 
-        let params = params.unwrap();
+		let canvas = data
+			.get("canvas")
+			.and_then(|c| c.as_any().downcast_ref::<CanvasData>())
+			.expect("Canvas data defined for points drawing");
+		let x_center_offset = rect.center().x - (canvas.width / 2.);
+		let y_center_offset = rect.center().y - (canvas.height / 2.);
+
+		let params = params.unwrap();
         let radius = params
             .get_param("Point Radius")
             .and_then(|p| p.as_float())
             .unwrap();
 
+
         if let Some(output) = data.get(make_stage_data_key("points", 1).as_str()) {
             if let Some(points) = output.as_any().downcast_ref::<PointsOutput>() {
                 for pos in &points.points {
-                    let canvas_pos = egui::pos2(pos.x, pos.y);
-                    painter.circle_filled(canvas_pos, radius, Color32::BLACK);
+                    let canvas_pos = egui::pos2(x_center_offset + pos.x, y_center_offset + pos.y);
+                    painter.circle_filled(canvas_pos, radius, ColorKey::Point.egui32());
                 }
             }
         }
