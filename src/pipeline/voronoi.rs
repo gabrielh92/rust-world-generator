@@ -22,6 +22,7 @@ pub fn make_voronoi_stage() -> PipelineStage {
 #[derive(Clone, Debug)]
 pub struct VoronoiCell {
     pub vertices: Vec<Vec2>,
+	pub is_border: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -89,7 +90,8 @@ impl PipelineStageExecutor for VoronoiStage {
                 .iter_vertices()
                 .map(|vp| Vec2::new(vp.x as f32, vp.y as f32))
                 .collect();
-            cells.push(VoronoiCell { vertices: vertices })
+			let is_border = vertices.iter().any(|v| v.x <= 0.0 || v.x >= canvas.width || v.y <= 0.0 || v.y >= canvas.height);
+            cells.push(VoronoiCell { vertices: vertices, is_border: is_border })
         });
 
         Box::new(VoronoiOutput { cells })

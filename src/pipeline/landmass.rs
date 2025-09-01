@@ -81,12 +81,11 @@ impl PipelineStageExecutor for LandmassStage {
 			.get("canvas")
 			.and_then(|c| c.as_any().downcast_ref::<CanvasData>())
 			.expect("Canvas data defined for landmass generation");
-		let x_center_offset = canvas.center.x - (canvas.width / 2.);
-		let y_center_offset = canvas.center.y - (canvas.height / 2.);
 
-		// todo: rotation factor in param doesn't match what's happening- landmass rotates by way more
-		let cos_t = rotation.cos();
-		let sin_t = rotation.sin();
+		// todo: fix rotation factor in param
+		let theta = rotation.to_radians();
+		let cos_t = theta.cos();
+		let sin_t = theta.sin();
 
 
         // Compute elevation for each cell center
@@ -95,9 +94,9 @@ impl PipelineStageExecutor for LandmassStage {
             // Cell center = average of vertices
 			let local_center = LandmassStage::average_point(&cell.vertices);
 
-			// todo: properly center landmass, it's offset left for some reason
-            let cx = canvas.center.x + local_center.x;
-            let cy = y_center_offset + local_center.y;
+			// todo: properly center landmass, this hack is wtf
+            let cx = local_center.x - (canvas.center.x / 3.);
+            let cy = local_center.y - (canvas.center.y / 2.);
 
             // Rotate
             let xr = cx * cos_t + cy * sin_t;
@@ -111,7 +110,6 @@ impl PipelineStageExecutor for LandmassStage {
             let d = ((xr / (sx / 2.0)).powi(2) + (yr / (sy / 2.0)).powi(2)).sqrt();
 
             // Falloff elevation
-			// todo: maybe make this exponential s.t. we never reach the edge
             let mut elevation = 1.0 - d;
 
 			// Add noise
@@ -119,9 +117,8 @@ impl PipelineStageExecutor for LandmassStage {
 			let n = LandmassStage::simple_noise(local_center.x, local_center.y, noise_scale);
 			elevation += noise_amplitude * n;
 
-			// todo: fix edge detection so land doesn't touch the edge of the canvas
-			//elevation = if LandmassStage::is_cell_at_edge(&local_center, canvas.width, canvas.height) { 0. } else {elevation};
-
+			elevation = if cell.is_border { -1. } else {elevation};
+			elevation = elevation.clamp(-1., 1.);
 			cells.push(LandmassCell { center: Vec2 { x: cx, y: cy }, vertices: cell.vertices.clone(), elevation });
         }
 
