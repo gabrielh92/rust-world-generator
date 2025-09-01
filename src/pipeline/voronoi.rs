@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use voronoice::{BoundingBox, VoronoiBuilder};
 
 use crate::{
@@ -21,8 +23,11 @@ pub fn make_voronoi_stage() -> PipelineStage {
 
 #[derive(Clone, Debug)]
 pub struct VoronoiCell {
+	pub index: usize,
     pub vertices: Vec<Vec2>,
+	pub centroid: Vec2,
 	pub is_border: bool,
+	pub triangles: Vec<Vec<usize>>,
 }
 
 #[derive(Clone, Debug)]
@@ -84,14 +89,31 @@ impl PipelineStageExecutor for VoronoiStage {
             .build()
             .expect("Failed to build Voronoi diagram");
 
+		// pre-compute map of triangles based on the neighbor site index
+		let t = &diagram.triangulation().triangles;
+		let mut triangles: HashMap<usize, Vec<Vec<usize>>> = HashMap::new();
+		for i in (0..t.len()).step_by(3) {
+			let a = t[i];
+    		let b = t[i + 1];
+    		let c = t[i + 2];
+
+   		 	let tri = vec![a, b, c];
+			for &site in &[a,b,c] { triangles.entry(site).or_default().push(tri.clone()); }
+		}
+
         let mut cells = Vec::new();
         diagram.iter_cells().for_each(|cell| {
+			let index = cell.site();
             let vertices: Vec<Vec2> = cell
                 .iter_vertices()
                 .map(|vp| Vec2::new(vp.x as f32, vp.y as f32))
                 .collect();
+			let centroid = Vec2 { x: cell.site_position().x as f32, y: cell.site_position().y as f32 };
+			let triangles = triangles[&index].clone();
 			let is_border = vertices.iter().any(|v| v.x <= 0.0 || v.x >= canvas.width || v.y <= 0.0 || v.y >= canvas.height);
-            cells.push(VoronoiCell { vertices: vertices, is_border: is_border })
+
+			println!("[{}] - triangles: {:?} centroid: {:?}", index, triangles, centroid);
+            cells.push(VoronoiCell { index: index, vertices: vertices, centroid: centroid, triangles: triangles, is_border: is_border })
         });
 
         Box::new(VoronoiOutput { cells })

@@ -1,3 +1,5 @@
+use noise::{NoiseFn, Perlin};
+
 use crate::canvas::CanvasData;
 use crate::mathlib::vec::Vec2;
 use crate::params::util::build_default_landmass_params;
@@ -92,54 +94,51 @@ impl PipelineStageExecutor for LandmassStage {
         let mut cells = Vec::new();
         for cell in &voronoi.cells {
             // Cell center = average of vertices
-			let local_center = LandmassStage::average_point(&cell.vertices);
+			let local_center = cell.centroid;
 
-			// todo: properly center landmass, this hack is wtf
-            let cx = local_center.x - (canvas.center.x / 3.);
-            let cy = local_center.y - (canvas.center.y / 2.);
+			// // todo: properly center landmass, this hack is wtf
+            // let cx = local_center.x - (canvas.center.x);
+            // let cy = local_center.y - (canvas.center.y);
 
-            // Rotate
-            let xr = cx * cos_t + cy * sin_t;
-            let yr = -cx * sin_t + cy * cos_t;
+            // // Rotate
+            // let xr = cx * cos_t + cy * sin_t;
+            // let yr = -cx * sin_t + cy * cos_t;
 
-			// Apply Scale
-			let sx = size_x * scale;
-			let sy = size_y * scale;
+			// // Apply Scale
+			// let sx = size_x * scale;
+			// let sy = size_y * scale;
 
-            // Elliptical distance
-            let d = ((xr / (sx / 2.0)).powi(2) + (yr / (sy / 2.0)).powi(2)).sqrt();
+            // // Elliptical distance
+			// 1 - e ^ -x
+            // let d = ((xr / (sx / 2.0)).powi(2) + (yr / (sy / 2.0)).powi(2)).sqrt();
 
-            // Falloff elevation
-            let mut elevation = 1.0 - d;
-
+            // // Falloff elevation
+            // let mut elevation = 1.0 - d;
+			let mut elevation = 0.;
 			// Add noise
 			// todo: update into a better shape generation function
-			let n = LandmassStage::simple_noise(local_center.x, local_center.y, noise_scale);
+			let n = LandmassStage::perlin_noise(local_center.x, local_center.y, noise_scale);
 			elevation += noise_amplitude * n;
 
 			elevation = if cell.is_border { -1. } else {elevation};
 			elevation = elevation.clamp(-1., 1.);
-			cells.push(LandmassCell { center: Vec2 { x: cx, y: cy }, vertices: cell.vertices.clone(), elevation });
+			cells.push(LandmassCell { center: Vec2 { x: local_center.x, y: local_center.y }, vertices: cell.vertices.clone(), elevation });
         }
 
-		println!("Landmass cells: {:?}", cells);
 		Box::new(LandmassOutput { cells })
 	}
 }
 
 impl LandmassStage {
-	fn average_point(vertices: &Vec<Vec2>) -> Vec2 {
-		let (sx, sy) = vertices.iter().fold((0.0, 0.0), |(ax, ay), v| (ax + v.x, ay + v.y));
-		let n = vertices.len() as f32;
-		Vec2::new(sx / n, sy / n)
-	}
-
 	fn simple_noise(x: f32, y: f32, scale: f32) -> f32 {
 		let s = scale;
 		((x * s).sin() * (y * s).cos()) as f32 // deterministic pseudo-noise
 	}
 
-	fn is_cell_at_edge(coord: &Vec2, width: f32, height: f32) -> bool {
-		coord.x <= 0.0 || coord.x >= width || coord.y <= 0.0 || coord.y >= height
+	fn perlin_noise(x: f32, y: f32, scale: f32) -> f32 {
+		let perlin = Perlin::new(0);
+		let nx = x as f64 * scale as f64;
+		let ny = y as f64 * scale as f64;
+		perlin.get([nx, ny]) as f32 // [-1, 1]
 	}
 }
