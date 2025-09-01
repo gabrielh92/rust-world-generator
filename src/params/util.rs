@@ -24,6 +24,8 @@ pub fn build_default_landmass_params() -> ParamGroup {
 		.float_param("X Size", 150., 50., 1000., 10.)
 		.float_param("Y Size", 150., 50., 1000., 10.)
 		.float_param("Rotation", 0., 0., 360., 5.)
+		.float_param("Water Level", 0., -1., 1., 0.01)
+		.float_param("Elevation Multiplier", 1., 0.25, 2.5, 0.25)
 		.float_param("Noise Scale", 0.02, 0.001, 0.1, 0.001)
 		.float_param("Noise Amplitude", 0.5, 0., 2., 0.1)
 		.build()

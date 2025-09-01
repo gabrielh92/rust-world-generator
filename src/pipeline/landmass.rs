@@ -18,6 +18,7 @@ pub fn make_landmass_stage() -> PipelineStage {
 #[derive(Debug, Clone)]
 pub struct LandmassCell {
 	pub center: Vec2,
+	pub vertices: Vec<Vec2>,
 	pub elevation: f32,
 }
 
@@ -50,11 +51,6 @@ impl PipelineStageExecutor for LandmassStage {
 	}
 
 	fn run(&mut self, params: Option<&crate::params::ParamGroup>, data: &super::StageDataMap) -> Box<dyn StageData> {
-		let voronoi = data
-			.get(make_stage_data_key("voronoi", 2).as_str())
-			.and_then(|d| d.as_any().downcast_ref::<VoronoiOutput>())
-			.expect("Voronoi data must exist for landmass definition");
-
 		let (scale, size_x, size_y, rotation) = if let Some(pg) = params {
 			(
 				pg.get_param("Scale").and_then(|p| p.as_float()).unwrap(),
@@ -76,6 +72,18 @@ impl PipelineStageExecutor for LandmassStage {
 			panic!("Landmass parameters undefined")
 		};
 
+		let voronoi = data
+			.get(make_stage_data_key("voronoi", 2).as_str())
+			.and_then(|d| d.as_any().downcast_ref::<VoronoiOutput>())
+			.expect("Voronoi data must exist for landmass definition");
+
+		let canvas = data
+			.get("canvas")
+			.and_then(|c| c.as_any().downcast_ref::<CanvasData>())
+			.expect("Canvas data defined for landmass generation");
+		let x_center_offset = canvas.center.x - (canvas.width / 2.);
+		let y_center_offset = canvas.center.y - (canvas.height / 2.);
+
 		// todo: rotation factor in param doesn't match what's happening- landmass rotates by way more
 		let cos_t = rotation.cos();
 		let sin_t = rotation.sin();
@@ -88,8 +96,8 @@ impl PipelineStageExecutor for LandmassStage {
 			let local_center = LandmassStage::average_point(&cell.vertices);
 
 			// todo: properly center landmass, it's offset left for some reason
-            let cx = local_center.x;
-            let cy = local_center.y;
+            let cx = canvas.center.x + local_center.x;
+            let cy = y_center_offset + local_center.y;
 
             // Rotate
             let xr = cx * cos_t + cy * sin_t;
@@ -114,9 +122,10 @@ impl PipelineStageExecutor for LandmassStage {
 			// todo: fix edge detection so land doesn't touch the edge of the canvas
 			//elevation = if LandmassStage::is_cell_at_edge(&local_center, canvas.width, canvas.height) { 0. } else {elevation};
 
-			cells.push(LandmassCell { center: local_center, elevation });
+			cells.push(LandmassCell { center: Vec2 { x: cx, y: cy }, vertices: cell.vertices.clone(), elevation });
         }
 
+		println!("Landmass cells: {:?}", cells);
 		Box::new(LandmassOutput { cells })
 	}
 }

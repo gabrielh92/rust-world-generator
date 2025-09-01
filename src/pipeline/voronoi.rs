@@ -81,7 +81,6 @@ impl PipelineStageExecutor for VoronoiStage {
                 .iter_vertices()
                 .map(|vp| Vec2::new(vp.x as f32, vp.y as f32))
                 .collect();
-            println!("Voronoi vertices: {:?}", vertices);
             cells.push(VoronoiCell { vertices: vertices })
         });
 

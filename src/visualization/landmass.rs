@@ -39,8 +39,14 @@ impl VisualLayer for LandmassVisualLayer {
         changed
     }
 
-    fn draw_canvas(&self, painter: &Painter, rect: &Rect, _params: Option<&ParamGroup>, data: &StageDataMap) {
+    fn draw_canvas(&self, painter: &Painter, rect: &Rect, params: Option<&ParamGroup>, data: &StageDataMap) {
         if !self.enabled { return; }
+
+		let params = params.unwrap();
+		let (water_level, elevation_multiplier) = (
+				params.get_param("Water Level").and_then(|p| p.as_float()).unwrap(),
+				params.get_param("Elevation Multiplier").and_then(|p| p.as_float()).unwrap(),
+		);
 
 		let canvas = data.get("canvas")
 			.and_then(|d| d.as_any().downcast_ref::<CanvasData>())
@@ -48,16 +54,13 @@ impl VisualLayer for LandmassVisualLayer {
 		let x_center_offset = rect.center().x - (canvas.width / 2.);
 		let y_center_offset = rect.center().y - (canvas.height / 2.);
 
-		let voronoi = data.get(make_stage_data_key("voronoi", 2).as_str())
-			.and_then(|d| d.as_any().downcast_ref::<VoronoiOutput>())
-			.unwrap();
-
         if let Some(output) = data.get(make_stage_data_key("landmass", 3).as_str()) {
-            if let Some(mask) = output.as_any().downcast_ref::<LandmassOutput>() {
-				for (cell, voronoi_cell) in mask.cells.iter().zip(&voronoi.cells) {
-					let color = if cell.elevation > 0.0 { ColorKey::Base.egui32() } else { ColorKey::Water.egui32() };
+            if let Some(landmass_output) = output.as_any().downcast_ref::<LandmassOutput>() {
+				for cell in &landmass_output.cells {
+					let scaled_land_color = ColorKey::Base.egui32_value_scaled_by(cell.elevation * elevation_multiplier);
+					let color = if cell.elevation > water_level { scaled_land_color } else { ColorKey::Water.egui32() };
 
-					let points: Vec<Pos2> = voronoi_cell.vertices
+					let points: Vec<Pos2> = cell.vertices
 						.iter()
 						.map(|v| egui::pos2(x_center_offset + v.x, y_center_offset + v.y))
 						.collect();

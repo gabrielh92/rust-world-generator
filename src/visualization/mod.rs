@@ -1,4 +1,5 @@
-use crate::params::ParamGroup;
+use crate::util::hsv_to_rgb;
+use crate::{params::ParamGroup, util::rgb_to_hsv};
 use crate::pipeline::StageDataMap;
 use egui::{Color32, Painter, Rect, Ui};
 
@@ -27,6 +28,15 @@ impl ColorKey {
 			ColorKey::VoronoiLines => Color32::LIGHT_GRAY,
 			ColorKey::Water => Color32::from_rgb(65, 105, 225),
 		}
+	}
+
+	pub fn egui32_value_scaled_by(self, factor: f32) -> Color32 {
+		let color = self.egui32();
+		let [r, g, b, a] = color.to_array();
+		let (h, s, mut v) = rgb_to_hsv(r, g, b);
+		v = (v * factor).clamp(0., 1.);
+		let (r2, g2, b2) = hsv_to_rgb(h, s, v);
+		Color32::from_rgba_premultiplied(r2, g2, b2, a)
 	}
 }
 
