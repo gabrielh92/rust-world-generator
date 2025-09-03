@@ -56,7 +56,9 @@ impl eframe::App for DebugVisualizer {
 			// Add canvas data into pipeline data
 			let w = self.canvas_layer.width();
 			let h = self.canvas_layer.height();
-			let c = Vec2 { x: panel_rect.center().x, y: panel_rect.center().y };
+
+			// use half width and half height because it's relative
+			let c = Vec2 { x: w / 2., y: h / 2. };
 			self.pipeline.data.insert(
 				"canvas".into(),
 				Box::new(CanvasData { width: w, height: h, center: c })

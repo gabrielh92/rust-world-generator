@@ -1,4 +1,4 @@
-use egui::{Painter, Rect, Sense, Ui};
+use egui::Rect;
 
 use crate::mathlib::vec::Vec2;
 use crate::params::{FloatParam, Param, ParamGroup};
@@ -105,7 +105,7 @@ impl VisualLayer for CanvasLayer {
         changed_width | changed_height
     }
 
-    fn draw_canvas(&self, painter: &egui::Painter, rect: &Rect, _params: Option<&ParamGroup>, data: &StageDataMap) {
+    fn draw_canvas(&self, painter: &egui::Painter, rect: &Rect, _params: Option<&ParamGroup>, _data: &StageDataMap) {
 		let canvas_size = egui::Vec2 { x: self.width(), y: self.height() };
 		let canvas_rect = egui::Rect::from_center_size(rect.center(), canvas_size);
 

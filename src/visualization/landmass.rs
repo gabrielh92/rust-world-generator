@@ -57,22 +57,29 @@ impl VisualLayer for LandmassVisualLayer {
         if let Some(output) = data.get(make_stage_data_key("landmass", 3).as_str()) {
             if let Some(landmass_output) = output.as_any().downcast_ref::<LandmassOutput>() {
 				for cell in &landmass_output.cells {
-					let scaled_land_color = ColorKey::Base.egui32_value_scaled_by((cell.elevation + 1.) * elevation_multiplier);
-					let color = if cell.elevation > water_level { scaled_land_color } else { ColorKey::Water.egui32() };
+					let scaled_land_color = ColorKey::Base.egui32_value_scaled_by(cell.elevation as f32 * elevation_multiplier);
+					let color = if cell.elevation as f32 > water_level { scaled_land_color } else { ColorKey::Water.egui32() };
 
-					let points: Vec<Pos2> = cell.vertices
+					let points: Vec<Pos2> = cell.cell.vertices
 						.iter()
 						.map(|v| egui::pos2(x_center_offset + v.x, y_center_offset + v.y))
 						.collect();
 
 					painter.add(egui::Shape::convex_polygon(points, color, egui::Stroke::NONE));
 
-                    painter.circle_filled(
-						egui::Pos2{ x: x_center_offset + cell.center.x, y: y_center_offset + cell.center.y},
-						1.5,
+					painter.text(
+						egui::Pos2{ x: x_center_offset + cell.cell.centroid.x, y: y_center_offset + cell.cell.centroid.y},
+						egui::Align2::CENTER_CENTER,
+						format!("{}", cell.cell.index),
+						egui::FontId::proportional(12.),
 						ColorKey::Canvas.egui32()
 					);
-				}
+
+                    painter.circle_filled(
+						egui::Pos2{ x: x_center_offset + canvas.center.x, y: y_center_offset + canvas.center.y },
+						1.5,
+						ColorKey::PointAlt.egui32()
+					);				}
             }
         }
     }

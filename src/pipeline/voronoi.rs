@@ -112,7 +112,7 @@ impl PipelineStageExecutor for VoronoiStage {
 			let triangles = triangles[&index].clone();
 			let is_border = vertices.iter().any(|v| v.x <= 0.0 || v.x >= canvas.width || v.y <= 0.0 || v.y >= canvas.height);
 
-			println!("[{}] - triangles: {:?} centroid: {:?}", index, triangles, centroid);
+			// println!("[{}] - triangles: {:?} centroid: {:?}", index, triangles, centroid);
             cells.push(VoronoiCell { index: index, vertices: vertices, centroid: centroid, triangles: triangles, is_border: is_border })
         });
 

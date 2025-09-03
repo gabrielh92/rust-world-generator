@@ -1,9 +1,12 @@
+use std::collections::HashSet;
+
 use noise::{NoiseFn, Perlin};
 
-use crate::canvas::CanvasData;
+use crate::canvas::{self, CanvasData};
 use crate::mathlib::vec::Vec2;
+use crate::mathlib::Normalize;
 use crate::params::util::build_default_landmass_params;
-use crate::pipeline::voronoi::VoronoiOutput;
+use crate::pipeline::voronoi::{VoronoiCell, VoronoiOutput};
 use crate::pipeline::{PipelineStage, PipelineStageExecutor, StageData};
 use crate::util::make_stage_data_key;
 use crate::visualization::landmass::LandmassVisualLayer;
@@ -19,9 +22,8 @@ pub fn make_landmass_stage() -> PipelineStage {
 
 #[derive(Debug, Clone)]
 pub struct LandmassCell {
-	pub center: Vec2,
-	pub vertices: Vec<Vec2>,
-	pub elevation: f32,
+	pub cell: VoronoiCell,
+	pub elevation: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -53,22 +55,20 @@ impl PipelineStageExecutor for LandmassStage {
 	}
 
 	fn run(&mut self, params: Option<&crate::params::ParamGroup>, data: &super::StageDataMap) -> Box<dyn StageData> {
-		let (scale, size_x, size_y, rotation) = if let Some(pg) = params {
+		let (falloff_rate, size_x, size_y) = if let Some(pg) = params {
 			(
-				pg.get_param("Scale").and_then(|p| p.as_float()).unwrap(),
+				pg.get_param("Land Falloff").and_then(|p| p.as_float()).unwrap(),
 				pg.get_param("X Size").and_then(|p| p.as_float()).unwrap(),
 				pg.get_param("Y Size").and_then(|p| p.as_float()).unwrap(),
-				pg.get_param("Rotation").and_then(|p| p.as_float()).unwrap(),
-
 			)
 		} else {
 			panic!("Landmass parameters undefined")
 		};
 
-		let (noise_scale, noise_amplitude) = if let Some(pg) = params {
+		let (land_noise_intensity, water_noise_intensity) = if let Some(pg) = params {
 			(
-				pg.get_param("Noise Scale").and_then(|p| p.as_float()).unwrap(),
-				pg.get_param("Noise Amplitude").and_then(|p| p.as_float()).unwrap(),
+				pg.get_param("Land Noise Intensity").and_then(|p| p.as_float()).unwrap() as f64,
+				pg.get_param("Water Noise Intensity").and_then(|p| p.as_float()).unwrap() as f64,
 			)
 		} else {
 			panic!("Landmass parameters undefined")
@@ -79,66 +79,70 @@ impl PipelineStageExecutor for LandmassStage {
 			.and_then(|d| d.as_any().downcast_ref::<VoronoiOutput>())
 			.expect("Voronoi data must exist for landmass definition");
 
-		let canvas = data
+		// we want to start abstracting the shape of the canvas from the generation in case we do tiling with diff polygons
+		// so we only get the center of the canvas and operate from there
+		let canvas_center = data
 			.get("canvas")
 			.and_then(|c| c.as_any().downcast_ref::<CanvasData>())
-			.expect("Canvas data defined for landmass generation");
+			.expect("Canvas data defined for landmass generation").center;
 
-		// todo: fix rotation factor in param
-		let theta = rotation.to_radians();
-		let cos_t = theta.cos();
-		let sin_t = theta.sin();
+		let reference_radius = LandmassStage::compute_ref_radius(&voronoi.cells, canvas_center);
 
-
-        // Compute elevation for each cell center
         let mut cells = Vec::new();
         for cell in &voronoi.cells {
-            // Cell center = average of vertices
-			let local_center = cell.centroid;
+			if cell.is_border {
+				cells.push(LandmassCell { cell: cell.clone(), elevation: -1. });
+				continue;
+			}
 
-			// // todo: properly center landmass, this hack is wtf
-            // let cx = local_center.x - (canvas.center.x);
-            // let cy = local_center.y - (canvas.center.y);
+			// todo: do we want elevation per vertex rather than per cell?
 
-            // // Rotate
-            // let xr = cx * cos_t + cy * sin_t;
-            // let yr = -cx * sin_t + cy * cos_t;
+			// Calculate Cartesian distance - d = √[(x₂ - x₁)² + (y₂ - y₁)²]
+			// Scale by the reference_radius (mean distance of all cells from center) which acts as a normalizer
+			let (cell_x, cell_y) = (cell.centroid.x, cell.centroid.y);
+			let x_component = (cell_x - canvas_center.x) / (reference_radius * size_x);
+			let y_component = (cell_y - canvas_center.y) / (reference_radius * size_y);
+			let cell_d_from_center = f32::sqrt(x_component * x_component + y_component * y_component);
 
-			// // Apply Scale
-			// let sx = size_x * scale;
-			// let sy = size_y * scale;
+			// Calculate base elevation as a radial function with a falloff_rate
+			let base_elevation = - ((cell_d_from_center - 1.) / falloff_rate).tanh() as f64;
+			println!("cell: {} at pos {:?} - d {}", cell.index, cell.centroid, cell_d_from_center);
+			println!("cell: {} base elevation {}", cell.index, base_elevation);
 
-            // // Elliptical distance
-			// 1 - e ^ -x
-            // let d = ((xr / (sx / 2.0)).powi(2) + (yr / (sy / 2.0)).powi(2)).sqrt();
+			// Apply noise for basic land and water features
+			let sample = LandmassStage::perlin_noise(cell.centroid.x, cell.centroid.y);
+			let noise_intensity = base_elevation.max(0.) * land_noise_intensity + (-base_elevation).max(0.) * water_noise_intensity;
+			println!("cell: {} sample {} intensity {}", cell.index, sample, noise_intensity);
 
-            // // Falloff elevation
-            // let mut elevation = 1.0 - d;
-			let mut elevation = 0.;
-			// Add noise
-			// todo: update into a better shape generation function
-			let n = LandmassStage::perlin_noise(local_center.x, local_center.y, noise_scale);
-			elevation += noise_amplitude * n;
-
-			elevation = if cell.is_border { -1. } else {elevation};
-			elevation = elevation.clamp(-1., 1.);
-			cells.push(LandmassCell { center: Vec2 { x: local_center.x, y: local_center.y }, vertices: cell.vertices.clone(), elevation });
+			let out_elevation = (base_elevation + sample * noise_intensity).clamp(-1., 1.);
+			cells.push(LandmassCell { cell: cell.clone(), elevation: out_elevation });
         }
+
+		println!("Center at {:?} - ref radius: {}", canvas_center, reference_radius);
 
 		Box::new(LandmassOutput { cells })
 	}
 }
 
 impl LandmassStage {
+	fn compute_ref_radius(cells: &[VoronoiCell], center: Vec2) -> f32 {
+		let mut sum = 0.0;
+		for c in cells {
+			sum += ((c.centroid.x - center.x).powi(2) + (c.centroid.y - center.y).powi(2)).sqrt();
+		}
+		(sum / cells.len() as f32).max(1e-4) // mean; median is even nicer if you want robustness
+	}
+
 	fn simple_noise(x: f32, y: f32, scale: f32) -> f32 {
 		let s = scale;
 		((x * s).sin() * (y * s).cos()) as f32 // deterministic pseudo-noise
 	}
 
-	fn perlin_noise(x: f32, y: f32, scale: f32) -> f32 {
+	fn perlin_noise(x: f32, y: f32) -> f64 {
+		// todo: expose seed in canvas layer and use here
 		let perlin = Perlin::new(0);
-		let nx = x as f64 * scale as f64;
-		let ny = y as f64 * scale as f64;
-		perlin.get([nx, ny]) as f32 // [-1, 1]
+		let nx = x as f64;
+		let ny = y as f64;
+		perlin.get([nx, ny]) // [-1, 1]
 	}
 }

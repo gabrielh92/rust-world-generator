@@ -85,9 +85,9 @@ pub struct RandomUniformDistribution;
 
 impl PointsDistribution for RandomUniformDistribution {
     fn generate_points(&mut self, count: usize, width: f32, height: f32) -> Vec<egui::Pos2> {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         (0..count)
-            .map(|_| egui::Pos2::new(rng.gen_range(0.0..width), rng.gen_range(0.0..height)))
+            .map(|_| egui::Pos2::new(rng.random_range(0.0..width), rng.random_range(0.0..height)))
             .collect()
     }
 }
