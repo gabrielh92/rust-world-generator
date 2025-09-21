@@ -1,5 +1,5 @@
 use crate::canvas::CanvasData;
-use crate::{pipeline::voronoi::VoronoiOutput, util::make_stage_data_key};
+use crate::util::make_stage_data_key;
 use crate::visualization::{ColorKey, VisualLayer};
 use crate::params::ParamGroup;
 use crate::pipeline::StageDataMap;
@@ -79,7 +79,8 @@ impl VisualLayer for LandmassVisualLayer {
 						egui::Pos2{ x: x_center_offset + canvas.center.x, y: y_center_offset + canvas.center.y },
 						1.5,
 						ColorKey::PointAlt.egui32()
-					);				}
+					);
+				}
             }
         }
     }

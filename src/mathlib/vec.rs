@@ -27,6 +27,7 @@ impl Hash for Vec2 {
 	}
 }
 
+#[allow(dead_code)]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,

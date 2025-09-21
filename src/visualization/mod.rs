@@ -14,7 +14,6 @@ pub enum ColorKey {
 	DelauneyLines,
 	Point,
 	PointAlt,
-	Text,
 	VoronoiLines,
 	Water,
 }
@@ -28,7 +27,6 @@ impl ColorKey {
 			ColorKey::DelauneyLines => Color32::DARK_BLUE,
 			ColorKey::Point => Color32::BLACK,
 			ColorKey::PointAlt => Color32::RED,
-			ColorKey::Text => Color32::DARK_GRAY,
 			ColorKey::VoronoiLines => Color32::LIGHT_GRAY,
 			ColorKey::Water => Color32::from_rgb(65, 105, 225),
 		}
@@ -47,6 +45,8 @@ impl ColorKey {
 pub trait VisualLayer {
     fn display_name(&self) -> &str;
     fn is_enabled(&self) -> bool;
+
+	#[allow(dead_code)]
     fn set_enabled(&mut self, enabled: bool);
 
     /// Draws controls in UI (optional, delegated from app shell)

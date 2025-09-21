@@ -1,10 +1,7 @@
-use std::collections::HashSet;
-
 use noise::{NoiseFn, Perlin};
 
-use crate::canvas::{self, CanvasData};
+use crate::canvas::CanvasData;
 use crate::mathlib::vec::Vec2;
-use crate::mathlib::Normalize;
 use crate::params::util::build_default_landmass_params;
 use crate::pipeline::voronoi::{VoronoiCell, VoronoiOutput};
 use crate::pipeline::{PipelineStage, PipelineStageExecutor, StageData};
@@ -133,11 +130,13 @@ impl LandmassStage {
 		(sum / cells.len() as f32).max(1e-4) // mean; median is even nicer if you want robustness
 	}
 
+	#[allow(dead_code)]
 	fn simple_noise(x: f32, y: f32, scale: f32) -> f32 {
 		let s = scale;
 		((x * s).sin() * (y * s).cos()) as f32 // deterministic pseudo-noise
 	}
 
+	#[allow(dead_code)]
 	fn perlin_noise(x: f32, y: f32) -> f64 {
 		// todo: expose seed in canvas layer and use here
 		let perlin = Perlin::new(0);

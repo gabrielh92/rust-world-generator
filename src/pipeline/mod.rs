@@ -17,7 +17,7 @@ pub struct Pipeline {
 impl Pipeline {
     pub fn new() -> Self {
         Self {
-            stages: Vec::new(),
+            stages: Vec::new(), // guaranteed ordered at insert
             data: StageDataMap::new(),
         }
     }
@@ -29,13 +29,25 @@ impl Pipeline {
 
     pub fn run(&mut self) {
         for stage in self.stages.iter_mut() {
-            let output = stage.executor.run(stage.params.as_ref(), &self.data);
-            self.data.insert(
-                make_stage_data_key(stage.executor.name(), stage.executor.rank()),
-                output,
-            );
+			let output = stage.executor.run(stage.params.as_ref(), &self.data);
+			self.data.insert(
+				make_stage_data_key(stage.executor.name(), stage.executor.rank()),
+				output,
+			);
         }
     }
+
+	#[allow(dead_code)]
+	pub fn run_from_stage(&mut self, idx: usize) {
+		let stages_to_run = &mut self.stages[idx..];
+		for stage in stages_to_run.iter_mut() {
+			let output = stage.executor.run(stage.params.as_ref(), &self.data);
+			self.data.insert(
+				make_stage_data_key(stage.executor.name(), stage.executor.rank()),
+				output,
+			);
+		}
+	}
 }
 
 /// A mapping from stage names to their computed output data.

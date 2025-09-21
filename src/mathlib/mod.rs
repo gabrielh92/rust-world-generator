@@ -1,5 +1,6 @@
 pub mod vec;
 
+#[allow(dead_code)]
 pub trait Normalize<T> {
 	fn normalize_scalar(self, min: T, max: T) -> T;
 }

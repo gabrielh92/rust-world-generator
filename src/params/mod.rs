@@ -8,6 +8,7 @@ pub struct ParamGroup {
     pub params: Vec<Param>,
 }
 
+#[allow(dead_code)]
 impl ParamGroup {
     pub fn new<T: Into<String>>(title: T, params: Vec<Param>) -> Self {
         Self {
@@ -238,6 +239,7 @@ impl ParamValue for EnumParam {
 /// The core trait for any parameter value (f32, usize, bool, etc.) //
 //////////////////////////////////////////////////////////////////////
 
+#[allow(dead_code)]
 pub trait ParamValue: Debug + Send {
     fn draw(&mut self, ui: &mut egui::Ui) -> bool;
 
@@ -290,6 +292,7 @@ impl Param {
             .map(|p| p.val)
     }
 
+	#[allow(dead_code)]
     pub fn as_bool(&self) -> Option<bool> {
         self.value
             .as_any()

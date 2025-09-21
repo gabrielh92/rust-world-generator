@@ -37,6 +37,7 @@ impl ParamGroupBuilder {
         self
     }
 
+	#[allow(dead_code)]
     pub fn bool_param(mut self, name: impl Into<String>, val: bool) -> Self {
         self.params.push(Param {
             name: name.into(),

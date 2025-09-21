@@ -23,7 +23,7 @@ impl DebugVisualizer {
 
 impl eframe::App for DebugVisualizer {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
-        let mut param_changed = false;
+        let mut params_changed = vec![false; self.pipeline.stages.len()];
         let mut canvas_changed = false;
 
         // Left control panel
@@ -37,7 +37,7 @@ impl eframe::App for DebugVisualizer {
                     println!("Params changed for stage: {}", stage.executor.name());
                 }
 
-                param_changed |= changed;
+				params_changed[(stage.executor.rank() - 1) as usize] = changed;
             }
         });
 
@@ -65,7 +65,8 @@ impl eframe::App for DebugVisualizer {
 			);
 
 			// todo: doesn't run at start-up as well
-			if param_changed || canvas_changed {
+			// todo: fix logic to run pipeline progressively on param changed instead of the entire thing
+			if params_changed.iter().any(|it| *it) || canvas_changed {
 				self.pipeline.run();
 			}
 
