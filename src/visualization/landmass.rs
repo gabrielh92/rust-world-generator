@@ -67,13 +67,14 @@ impl VisualLayer for LandmassVisualLayer {
 
 					painter.add(egui::Shape::convex_polygon(points, color, egui::Stroke::NONE));
 
-					painter.text(
-						egui::Pos2{ x: x_center_offset + cell.cell.centroid.x, y: y_center_offset + cell.cell.centroid.y},
-						egui::Align2::CENTER_CENTER,
-						format!("{}", cell.cell.index),
-						egui::FontId::proportional(12.),
-						ColorKey::Canvas.egui32()
-					);
+					// number label for each point
+					// painter.text(
+					// 	egui::Pos2{ x: x_center_offset + cell.cell.centroid.x, y: y_center_offset + cell.cell.centroid.y},
+					// 	egui::Align2::CENTER_CENTER,
+					// 	format!("{}", cell.cell.index),
+					// 	egui::FontId::proportional(12.),
+					// 	ColorKey::Canvas.egui32()
+					// );
 
                     painter.circle_filled(
 						egui::Pos2{ x: x_center_offset + canvas.center.x, y: y_center_offset + canvas.center.y },

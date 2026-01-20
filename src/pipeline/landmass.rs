@@ -102,7 +102,7 @@ impl PipelineStageExecutor for LandmassStage {
 			let cell_d_from_center = f32::sqrt(x_component * x_component + y_component * y_component);
 
 			// Calculate base elevation as a radial function with a falloff_rate
-			let base_elevation = - ((cell_d_from_center - 1.) / falloff_rate).tanh() as f64;
+			let base_elevation = 0. * - ((cell_d_from_center - 1.) / falloff_rate).tanh() as f64;
 			println!("cell: {} at pos {:?} - d {}", cell.index, cell.centroid, cell_d_from_center);
 			println!("cell: {} base elevation {}", cell.index, base_elevation);
 
