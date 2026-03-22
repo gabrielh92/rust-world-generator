@@ -5,6 +5,7 @@ use egui::{Color32, Painter, Rect, Ui};
 pub mod points;
 pub mod voronoi;
 pub mod landmass;
+pub mod elevation;
 
 /// Linearly interpolate between two Color32 values.
 pub fn lerp_color(a: Color32, b: Color32, t: f32) -> Color32 {

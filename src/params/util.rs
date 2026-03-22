@@ -32,6 +32,58 @@ pub fn build_default_voronoi_params() -> ParamGroup {
         .build()
 }
 
+pub fn build_default_elevation_params() -> ParamGroup {
+    ParamGroupBuilder::new("Elevation")
+        // Ridge injection
+        .enum_param(
+            "Ridge Mode",
+            vec!["Follow Terrain".into(), "Random".into(), "None".into()],
+            0,
+        )
+        .with_tooltip(
+            "Follow Terrain: anchors ridges near Stage 3 elevation maxima. \
+             Random: picks anchors anywhere on land.",
+        )
+        .int_param("Num Ridges", 4, 0, 12, 1)
+        .with_tooltip("Number of mountain ridge lines to inject")
+        .float_param("Ridge Intensity", 0.5, 0.0, 1.0, 0.02)
+        .with_tooltip("Peak height added at the ridge centre")
+        .float_param("Ridge Width", 0.12, 0.02, 0.5, 0.01)
+        .with_tooltip("Falloff width of each ridge (fraction of canvas diagonal)")
+        // Redistribution
+        .enum_param(
+            "Distribution",
+            vec!["Natural".into(), "Flat".into(), "Mountainous".into()],
+            0,
+        )
+        .with_tooltip(
+            "Target elevation distribution after ridge injection. \
+             Natural ≈ Earth-like; Flat = mostly lowlands; Mountainous = high terrain.",
+        )
+        .float_param("Redistribution Strength", 0.6, 0.0, 1.0, 0.02)
+        .with_tooltip(
+            "How strongly to remap elevation to the target distribution (0 = off, 1 = full)",
+        )
+        // Stage 3 blend
+        .float_param("Stage 3 Blend", 0.5, 0.0, 1.0, 0.02)
+        .with_tooltip(
+            "Weight given to Stage 3 rough elevation as a starting point. \
+             0 = ignore Stage 3 entirely and recompute from scratch.",
+        )
+        // Visual-only
+        .float_param("Water Level", 0.0, -1.0, 1.0, 0.01)
+        .with_tooltip("Rendering threshold — cells below render as water")
+        .visual_only()
+        .enum_param(
+            "View Mode",
+            vec!["Elevation".into(), "Land Type".into()],
+            0,
+        )
+        .with_tooltip("Elevation: gradient by height.  Land Type: flat colours per cell type")
+        .visual_only()
+        .build()
+}
+
 pub fn build_default_landmass_params() -> ParamGroup {
     ParamGroupBuilder::new("Landmass")
         // --- shaping mode ---

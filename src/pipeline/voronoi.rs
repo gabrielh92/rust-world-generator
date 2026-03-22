@@ -168,21 +168,24 @@ impl PipelineStageExecutor for VoronoiStage {
             });
         }
 
-        // --- Build cell neighbour adjacency from Delaunay triangulation ---
+        // --- Build cell neighbour adjacency from shared corners ---
+        // Two cells that share a Voronoi corner also share a Voronoi edge, making them neighbours.
+        // This is more robust than scanning Delaunay triangles, which can miss cells that don't
+        // appear as a source vertex in the triangulation output (degenerate Lloyd iterations, hull).
         {
-            let triangles = &diagram.triangulation().triangles;
-            let mut adj: HashMap<usize, HashSet<usize>> = HashMap::new();
-
-            for chunk in triangles.chunks_exact(3) {
-                let (a, b, c) = (chunk[0], chunk[1], chunk[2]);
-                for (x, y) in [(a, b), (b, a), (b, c), (c, b), (c, a), (a, c)] {
-                    adj.entry(x).or_default().insert(y);
-                }
-            }
-
-            // cells are guaranteed to be in site-index order by voronoice
             let id_to_idx: HashMap<usize, usize> =
                 cells.iter().enumerate().map(|(i, c)| (c.id, i)).collect();
+
+            let mut adj: HashMap<usize, HashSet<usize>> = HashMap::new();
+            for corner in &corners {
+                let ids = &corner.adjacent_cell_ids;
+                for i in 0..ids.len() {
+                    for j in (i + 1)..ids.len() {
+                        adj.entry(ids[i]).or_default().insert(ids[j]);
+                        adj.entry(ids[j]).or_default().insert(ids[i]);
+                    }
+                }
+            }
 
             for (cell_id, neighbors) in &adj {
                 if let Some(&idx) = id_to_idx.get(cell_id) {
