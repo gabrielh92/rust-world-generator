@@ -1,5 +1,6 @@
-use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
+use rand::SeedableRng;
+use rand::Rng;
+use rand_pcg::Pcg64;
 
 use crate::canvas::CanvasData;
 use crate::mathlib::vec::Vec2;
@@ -47,8 +48,8 @@ impl PipelineStageExecutor for PointsStage {
         let min_distance = pg.get_param("Min Distance").and_then(|p| p.as_float()).unwrap_or(35.0);
 
         // Seed derived deterministically from world seed + stage constant
-        let seed = canvas.seed as u64 ^ 0x504F_494E_5453u64; // "POINTS"
-        let mut rng = StdRng::seed_from_u64(seed);
+        let seed = canvas.seed ^ 0x504F_494E_5453u64; // "POINTS"
+        let mut rng = Pcg64::seed_from_u64(seed);
 
         let points = match distribution_name {
             "Uniform Grid"   => UniformGridDistribution.generate_points(count, canvas.width, canvas.height, &mut rng),
@@ -66,7 +67,7 @@ impl PipelineStageExecutor for PointsStage {
 
 pub trait PointsDistribution {
     /// Generate site points. `count` is a hint; Poisson Disc ignores it in favour of `min_distance`.
-    fn generate_points(&mut self, count: usize, width: f32, height: f32, rng: &mut StdRng) -> Vec<Vec2>;
+    fn generate_points(&mut self, count: usize, width: f32, height: f32, rng: &mut Pcg64) -> Vec<Vec2>;
 }
 
 // ---------------------------------------------------------------------------
@@ -77,7 +78,7 @@ pub trait PointsDistribution {
 pub struct RandomUniformDistribution;
 
 impl PointsDistribution for RandomUniformDistribution {
-    fn generate_points(&mut self, count: usize, width: f32, height: f32, rng: &mut StdRng) -> Vec<Vec2> {
+    fn generate_points(&mut self, count: usize, width: f32, height: f32, rng: &mut Pcg64) -> Vec<Vec2> {
         (0..count)
             .map(|_| Vec2::new(rng.random_range(0.0..width), rng.random_range(0.0..height)))
             .collect()
@@ -92,7 +93,7 @@ impl PointsDistribution for RandomUniformDistribution {
 pub struct UniformGridDistribution;
 
 impl PointsDistribution for UniformGridDistribution {
-    fn generate_points(&mut self, count: usize, width: f32, height: f32, _rng: &mut StdRng) -> Vec<Vec2> {
+    fn generate_points(&mut self, count: usize, width: f32, height: f32, _rng: &mut Pcg64) -> Vec<Vec2> {
         let mut points = Vec::new();
         let spacing = ((width * height) / count as f32).sqrt();
         let mut y = spacing / 2.0;
@@ -117,7 +118,7 @@ pub struct PoissonDiscDistribution {
 }
 
 impl PointsDistribution for PoissonDiscDistribution {
-    fn generate_points(&mut self, _count: usize, width: f32, height: f32, rng: &mut StdRng) -> Vec<Vec2> {
+    fn generate_points(&mut self, _count: usize, width: f32, height: f32, rng: &mut Pcg64) -> Vec<Vec2> {
         let r = self.min_distance;
         let cell_size = r / 2.0_f32.sqrt();
         let grid_w = (width / cell_size).ceil() as usize + 1;

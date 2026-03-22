@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use noise::{NoiseFn, Perlin};
-use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
+use rand_pcg::Pcg64;
 
 use crate::canvas::CanvasData;
 use crate::mathlib::vec::Vec2;
@@ -97,8 +97,8 @@ impl PipelineStageExecutor for LandmassStage {
         let n = cells.len();
 
         // Seed derived from world seed + stage constant
-        let seed = canvas.seed as u64 ^ 0x4C414E44_4D415353u64; // "LANDMASS"
-        let perlin = Perlin::new(canvas.seed);
+        let seed = canvas.seed ^ 0x4C414E44_4D415353u64; // "LANDMASS"
+        let perlin = Perlin::new(canvas.seed as u32);
 
         // --- Step 1: Determine is_land per cell ---
         let is_land: Vec<bool> = match mode {
@@ -207,7 +207,7 @@ fn continent_seeds_land(
     seed: u64,
     perlin: &Perlin,
 ) -> Vec<bool> {
-    let mut rng = StdRng::seed_from_u64(seed);
+    let mut rng = Pcg64::seed_from_u64(seed);
     let id_to_idx: HashMap<usize, usize> =
         cells.iter().enumerate().map(|(i, c)| (c.id, i)).collect();
 

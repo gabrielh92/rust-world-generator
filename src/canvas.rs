@@ -11,7 +11,7 @@ pub struct CanvasData {
     pub height: f32,
     pub center: Vec2,
     /// World seed used by all pipeline stages for deterministic generation.
-    pub seed: u32,
+    pub seed: u64,
 }
 
 impl StageData for CanvasData {
@@ -60,8 +60,8 @@ impl CanvasLayer {
     pub fn height(&self) -> f32 {
         self.config.get_param("Height").and_then(|p| p.as_float()).unwrap_or(600.)
     }
-    pub fn seed(&self) -> u32 {
-        self.config.get_param("Seed").and_then(|p| p.as_int()).unwrap_or(0) as u32
+    pub fn seed(&self) -> u64 {
+        self.config.get_param("Seed").and_then(|p| p.as_int()).unwrap_or(0) as u64
     }
 }
 

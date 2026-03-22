@@ -1,8 +1,8 @@
 use std::collections::{HashMap, VecDeque};
 
 use noise::{NoiseFn, Perlin};
-use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
+use rand_pcg::Pcg64;
 
 use crate::canvas::CanvasData;
 use crate::mathlib::vec::Vec2;
@@ -73,9 +73,9 @@ impl PipelineStageExecutor for ElevationStage {
         let cells = &landmass.cells;
         let n = cells.len();
 
-        let seed = canvas.seed as u64 ^ 0x454C455641_u64; // "ELEVA"
-        let mut rng = StdRng::seed_from_u64(seed);
-        let perlin = Perlin::new(canvas.seed.wrapping_add(1));
+        let seed = canvas.seed ^ 0x454C455641_u64; // "ELEVA"
+        let mut rng = Pcg64::seed_from_u64(seed);
+        let perlin = Perlin::new(canvas.seed.wrapping_add(1) as u32);
 
         let id_to_idx: HashMap<usize, usize> =
             cells.iter().enumerate().map(|(i, c)| (c.id, i)).collect();
@@ -212,7 +212,7 @@ fn build_ridges(
     mode: &str,
     elevation: &[f32],
     id_to_idx: &HashMap<usize, usize>,
-    rng: &mut StdRng,
+    rng: &mut Pcg64,
 ) -> Vec<(Vec2, Vec2)> {
     let land_cells: Vec<usize> = cells.iter().enumerate()
         .filter(|(_, c)| c.is_land && !c.is_border && !c.is_coast)
