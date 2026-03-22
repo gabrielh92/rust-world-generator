@@ -256,23 +256,31 @@ pub struct Param {
     pub name: String,
     pub tooltip: Option<String>,
     pub value: Box<dyn ParamValue>,
-	// pub trigger: bool, // todo: add functionality to have params trigger regen and for params to not
+    /// If true, changing this param updates the rendered view but does NOT
+    /// trigger a pipeline re-run. Use for display-only controls like water
+    /// level, view mode, point radius, label toggles, etc.
+    pub visual_only: bool,
 }
 
 impl Param {
     pub fn draw(&mut self, ui: &mut egui::Ui) -> bool {
-        let mut changed = false;
-        ui.horizontal(|ui| {
-            let label = egui::RichText::new(&self.name).strong();
-            if let Some(tt) = &self.tooltip {
-                ui.label(label).on_hover_text(tt);
-            } else {
-                ui.label(label);
-            }
-
-            changed = self.value.draw(ui);
+        let mut value_changed = false;
+        // Push a unique ID scope per param so that widgets like ComboBox
+        // don't collide when multiple enum params exist in the same group.
+        ui.push_id(&self.name, |ui| {
+            ui.horizontal(|ui| {
+                let label = egui::RichText::new(&self.name).strong();
+                if let Some(tt) = &self.tooltip {
+                    ui.label(label).on_hover_text(tt);
+                } else {
+                    ui.label(label);
+                }
+                value_changed = self.value.draw(ui);
+            });
         });
-        changed
+        // Visual-only params let egui repaint naturally but don't signal
+        // a pipeline re-run to the caller.
+        value_changed && !self.visual_only
     }
 
     ///! Note: as_str() intentionally ignored because it depends on whether value is an EnumParam or a StringParam

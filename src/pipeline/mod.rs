@@ -1,6 +1,5 @@
 use std::fmt::Debug;
 
-use crate::util::make_stage_data_key;
 use crate::{params::ParamGroup, visualization::VisualLayer};
 
 pub mod points;
@@ -27,31 +26,27 @@ impl Pipeline {
         self.stages.sort_by_key(|s| s.executor.rank());
     }
 
+    /// Run all stages in rank order.
     pub fn run(&mut self) {
-        for stage in self.stages.iter_mut() {
-			let output = stage.executor.run(stage.params.as_ref(), &self.data);
-			self.data.insert(
-				make_stage_data_key(stage.executor.name(), stage.executor.rank()),
-				output,
-			);
-        }
+        self.run_from_stage(0);
     }
 
-	#[allow(dead_code)]
-	pub fn run_from_stage(&mut self, idx: usize) {
-		let stages_to_run = &mut self.stages[idx..];
-		for stage in stages_to_run.iter_mut() {
-			let output = stage.executor.run(stage.params.as_ref(), &self.data);
-			self.data.insert(
-				make_stage_data_key(stage.executor.name(), stage.executor.rank()),
-				output,
-			);
-		}
-	}
+    /// Run stages from `idx` onward (inclusive), reusing upstream data already in the map.
+    /// Safe to call after a partial param change — upstream stage outputs remain valid.
+    pub fn run_from_stage(&mut self, idx: usize) {
+        // Use an iterator (not index expressions) so the borrow checker can apply
+        // field splitting: stage.executor (mut) and stage.params (ref) are disjoint,
+        // and self.stages (via iterator) and self.data are disjoint fields of Pipeline.
+        for stage in self.stages[idx..].iter_mut() {
+            let key = stage.executor.data_key();
+            let output = stage.executor.run(stage.params.as_ref(), &self.data);
+            self.data.insert(key.to_string(), output);
+        }
+    }
 }
 
-/// A mapping from stage names to their computed output data.
-/// Acts as the shared memory across all pipeline stages.
+/// A mapping from stage data-keys to their computed outputs.
+/// Acts as shared memory across all pipeline stages.
 pub type StageDataMap = std::collections::HashMap<String, Box<dyn StageData>>;
 
 pub trait StageData: Debug + Send + Sync {
@@ -59,23 +54,21 @@ pub trait StageData: Debug + Send + Sync {
 }
 
 /// The execution logic for a pipeline stage.
-/// Takes in shared pipeline data and computes new output to be stored in the data map.
 pub trait PipelineStageExecutor {
     fn name(&self) -> &str;
 
-    /// Returns the rank of this stage in the whole pipeline
+    /// Rank determines execution order (lower = earlier).
     fn rank(&self) -> u8;
 
-    /// Run computation logic, using inputs and returning output
-    fn run(
-        &mut self,
-        params: Option<&ParamGroup>,
-        pipeline_data: &StageDataMap,
-    ) -> Box<dyn StageData>;
+    /// Stable key used to store and retrieve this stage's output in `StageDataMap`.
+    /// Must be unique across all stages. Prefer the module-level `STAGE_DATA_KEY` constant.
+    fn data_key(&self) -> &'static str;
+
+    /// Run computation, consuming upstream data and returning this stage's output.
+    fn run(&mut self, params: Option<&ParamGroup>, pipeline_data: &StageDataMap) -> Box<dyn StageData>;
 }
 
-/// Represents a full stage of computation, including its executor, UI params, and visual rendering layer.
-/// Controls execution, parameters, and visualization for a specific part of the generation pipeline.
+/// A full pipeline stage: executor + UI params + visual rendering layer.
 pub struct PipelineStage {
     pub executor: Box<dyn PipelineStageExecutor>,
     pub params: Option<ParamGroup>,

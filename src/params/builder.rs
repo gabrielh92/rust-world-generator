@@ -27,21 +27,18 @@ impl ParamGroupBuilder {
         self.params.push(Param {
             name: name.into(),
             tooltip: None,
-            value: Box::new(IntParam {
-                val,
-                min,
-                max,
-                step,
-            }),
+            visual_only: false,
+            value: Box::new(IntParam { val, min, max, step }),
         });
         self
     }
 
-	#[allow(dead_code)]
+    #[allow(dead_code)]
     pub fn bool_param(mut self, name: impl Into<String>, val: bool) -> Self {
         self.params.push(Param {
             name: name.into(),
             tooltip: None,
+            visual_only: false,
             value: Box::new(BoolParam { val }),
         });
         self
@@ -58,12 +55,8 @@ impl ParamGroupBuilder {
         self.params.push(Param {
             name: name.into(),
             tooltip: None,
-            value: Box::new(FloatParam {
-                val,
-                min,
-                max,
-                step,
-            }),
+            visual_only: false,
+            value: Box::new(FloatParam { val, min, max, step }),
         });
         self
     }
@@ -77,6 +70,7 @@ impl ParamGroupBuilder {
         self.params.push(Param {
             name: name.into(),
             tooltip: None,
+            visual_only: false,
             value: Box::new(EnumParam { options, selected }),
         });
         self
@@ -85,6 +79,14 @@ impl ParamGroupBuilder {
     pub fn with_tooltip(mut self, tooltip: impl Into<String>) -> Self {
         if let Some(last) = self.params.last_mut() {
             last.tooltip = Some(tooltip.into());
+        }
+        self
+    }
+
+    /// Mark the last-added param as visual-only (won't trigger pipeline re-run).
+    pub fn visual_only(mut self) -> Self {
+        if let Some(last) = self.params.last_mut() {
+            last.visual_only = true;
         }
         self
     }

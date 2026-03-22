@@ -1,7 +1,3 @@
-pub fn make_stage_data_key(name: &str, rank: u8) -> String {
-    format!("params:{rank}:{name}")
-}
-
 pub fn rgb_to_hsv(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
     let rf = r as f32 / 255.0;
     let gf = g as f32 / 255.0;

@@ -1,9 +1,8 @@
 use crate::canvas::CanvasData;
-use crate::util::make_stage_data_key;
-use crate::visualization::{ColorKey, VisualLayer};
+use crate::visualization::{elevation_color, lerp_color, ColorKey, VisualLayer};
 use crate::params::ParamGroup;
 use crate::pipeline::StageDataMap;
-use crate::pipeline::landmass::LandmassOutput;
+use crate::pipeline::landmass::{LandmassOutput, STAGE_DATA_KEY as LANDMASS_KEY};
 use egui::{Painter, Pos2, Rect, Ui};
 
 #[derive(Default)]
@@ -12,77 +11,112 @@ pub struct LandmassVisualLayer {
 }
 
 impl VisualLayer for LandmassVisualLayer {
-    fn display_name(&self) -> &str { "Landmass Layer" }
+    fn display_name(&self) -> &str { "Landmass" }
     fn is_enabled(&self) -> bool { self.enabled }
-    fn set_enabled(&mut self, e: bool) { self.enabled = e }
+    fn set_enabled(&mut self, e: bool) { self.enabled = e; }
 
     fn draw_controls(&mut self, ui: &mut Ui, params: Option<&mut ParamGroup>) -> bool {
         let mut changed = false;
-
         let name = self.display_name().to_string();
         let enabled = &mut self.enabled;
-
         ui.collapsing(name, |ui| {
             changed |= ui.checkbox(enabled, "Enabled").changed();
-
             if *enabled {
                 if let Some(p) = params {
-                    // Don't call p.draw_controls(ui), because it includes its own collapsible.
-                    // Instead, draw just the inner fields manually:
                     for param in &mut p.params {
                         changed |= param.draw(ui);
                     }
                 }
             }
         });
-
         changed
     }
 
     fn draw_canvas(&self, painter: &Painter, rect: &Rect, params: Option<&ParamGroup>, data: &StageDataMap) {
         if !self.enabled { return; }
 
-		let params = params.unwrap();
-		let (water_level, elevation_multiplier) = (
-				params.get_param("Water Level").and_then(|p| p.as_float()).unwrap(),
-				params.get_param("Elevation Multiplier").and_then(|p| p.as_float()).unwrap(),
-		);
+        let pg = match params { Some(p) => p, None => return };
 
-		let canvas = data.get("canvas")
-			.and_then(|d| d.as_any().downcast_ref::<CanvasData>())
-			.unwrap();
-		let x_center_offset = rect.center().x - (canvas.width / 2.);
-		let y_center_offset = rect.center().y - (canvas.height / 2.);
+        let water_level = pg.get_param("Water Level").and_then(|p| p.as_float()).unwrap_or(0.0);
+        let view_mode   = pg.get_param("View Mode").map(|p| p.value.as_str()).unwrap_or("Elevation");
 
-        if let Some(output) = data.get(make_stage_data_key("landmass", 3).as_str()) {
-            if let Some(landmass_output) = output.as_any().downcast_ref::<LandmassOutput>() {
-				for cell in &landmass_output.cells {
-					let scaled_land_color = ColorKey::Base.egui32_value_scaled_by(cell.elevation as f32 * elevation_multiplier);
-					let color = if cell.elevation as f32 > water_level { scaled_land_color } else { ColorKey::Water.egui32() };
+        let canvas = data.get("canvas")
+            .and_then(|d| d.as_any().downcast_ref::<CanvasData>())
+            .unwrap();
 
-					let points: Vec<Pos2> = cell.cell.vertices
-						.iter()
-						.map(|v| egui::pos2(x_center_offset + v.x, y_center_offset + v.y))
-						.collect();
+        let ox = rect.center().x - canvas.width / 2.0;
+        let oy = rect.center().y - canvas.height / 2.0;
 
-					painter.add(egui::Shape::convex_polygon(points, color, egui::Stroke::NONE));
+        let output = match data
+            .get(LANDMASS_KEY)
+            .and_then(|d| d.as_any().downcast_ref::<LandmassOutput>())
+        {
+            Some(o) => o,
+            None => return,
+        };
 
-					// number label for each point
-					// painter.text(
-					// 	egui::Pos2{ x: x_center_offset + cell.cell.centroid.x, y: y_center_offset + cell.cell.centroid.y},
-					// 	egui::Align2::CENTER_CENTER,
-					// 	format!("{}", cell.cell.index),
-					// 	egui::FontId::proportional(12.),
-					// 	ColorKey::Canvas.egui32()
-					// );
+        for cell in &output.cells {
+            // Collect polygon vertices from corner positions
+            let points: Vec<Pos2> = cell.corner_ids.iter()
+                .map(|&cid| {
+                    let p = output.corners[cid].position;
+                    Pos2::new(ox + p.x, oy + p.y)
+                })
+                .collect();
 
-                    painter.circle_filled(
-						egui::Pos2{ x: x_center_offset + canvas.center.x, y: y_center_offset + canvas.center.y },
-						1.5,
-						ColorKey::PointAlt.egui32()
-					);
-				}
-            }
+            if points.len() < 3 { continue; }
+
+            let fill = match view_mode {
+                "Land Type" => {
+                    if cell.is_border {
+                        ColorKey::Border.egui32()
+                    } else if cell.is_coast {
+                        ColorKey::Coast.egui32()
+                    } else if cell.is_land {
+                        // Tint land slightly by elevation
+                        lerp_color(
+                            ColorKey::Land.egui32(),
+                            egui::Color32::from_rgb(230, 230, 230),
+                            (cell.elevation * 0.6).clamp(0.0, 1.0),
+                        )
+                    } else {
+                        // Ocean: shade by depth
+                        lerp_color(
+                            ColorKey::Ocean.egui32(),
+                            egui::Color32::from_rgb(10, 25, 70),
+                            (-cell.elevation * 0.8).clamp(0.0, 1.0),
+                        )
+                    }
+                }
+                _ => {
+                    // Elevation mode: use water_level as the land/ocean threshold
+                    if cell.is_border {
+                        ColorKey::Border.egui32()
+                    } else {
+                        let display_elev = if cell.elevation > water_level {
+                            // Remap land part to [0, 1]
+                            (cell.elevation - water_level) / (1.0 - water_level)
+                        } else {
+                            // Remap ocean part to [-1, 0]
+                            (cell.elevation - water_level) / (water_level + 1.0)
+                        };
+                        elevation_color(display_elev)
+                    }
+                }
+            };
+
+            painter.add(egui::Shape::convex_polygon(
+                points,
+                fill,
+                egui::Stroke::NONE,
+            ));
         }
+
+        // Canvas centre marker
+        painter.circle_filled(
+            Pos2::new(ox + canvas.center.x, oy + canvas.center.y),
+            2.0,
+            ColorKey::PointAlt.egui32(),
+        );
     }
 }
