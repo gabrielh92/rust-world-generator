@@ -1,4 +1,4 @@
-use egui::{CentralPanel, Context, Sense, SidePanel};
+use egui::{CentralPanel, Color32, Context, Sense, SidePanel};
 
 use crate::canvas::{CanvasData, CanvasLayer};
 use crate::mathlib::vec::Vec2;
@@ -21,6 +21,52 @@ impl DebugVisualizer {
         }
     }
 
+    fn draw_legend(&self, ui: &mut egui::Ui) {
+        ui.collapsing("Legend", |ui| {
+            // Determine which view modes are active across enabled stages
+            let mut show_elevation = false;
+            let mut show_land_type = false;
+
+            for stage in &self.pipeline.stages {
+                if !stage.visual_layer.is_enabled() { continue; }
+                let view_mode = stage.params.as_ref()
+                    .and_then(|p| p.get_param("View Mode"))
+                    .map(|p| p.value.as_str())
+                    .unwrap_or("Elevation");
+                match view_mode {
+                    "Land Type" => show_land_type = true,
+                    _           => show_elevation = true,
+                }
+            }
+
+            if show_elevation {
+                ui.label(egui::RichText::new("Elevation").strong().small());
+                legend_swatch(ui, Color32::from_rgb(10,  30,  80),  "Deep Ocean    < -0.5");
+                legend_swatch(ui, Color32::from_rgb(50,  100, 180), "Shallow Ocean  -0.5→-0.1");
+                legend_swatch(ui, Color32::from_rgb(90,  150, 210), "Coast Water   -0.1→0.0");
+                legend_swatch(ui, Color32::from_rgb(220, 200, 140), "Beach          0.0→0.15");
+                legend_swatch(ui, Color32::from_rgb(90,  160, 60),  "Lowland       0.15→0.5");
+                legend_swatch(ui, Color32::from_rgb(65,  120, 45),  "Highland       0.5→0.8");
+                legend_swatch(ui, Color32::from_rgb(120, 100, 80),  "Mountain       0.8→1.0");
+                legend_swatch(ui, Color32::from_rgb(230, 230, 230), "Peak          →1.0");
+            }
+
+            if show_land_type {
+                if show_elevation { ui.add_space(4.0); }
+                ui.label(egui::RichText::new("Land Type").strong().small());
+                legend_swatch(ui, Color32::from_rgb(40,  40,  60),  "Border");
+                legend_swatch(ui, Color32::from_rgb(50,  100, 180), "Ocean");
+                legend_swatch(ui, Color32::from_rgb(220, 200, 140), "Coast");
+                legend_swatch(ui, Color32::from_rgb(90,  160, 60),  "Land (low elev)");
+                legend_swatch(ui, Color32::from_rgb(230, 230, 230), "Land (high elev)");
+            }
+
+            if !show_elevation && !show_land_type {
+                ui.label(egui::RichText::new("Enable a stage to see legend").weak().small());
+            }
+        });
+    }
+
     fn inject_canvas_data(&mut self) {
         let w = self.canvas_layer.width();
         let h = self.canvas_layer.height();
@@ -30,6 +76,15 @@ impl DebugVisualizer {
             Box::new(CanvasData { width: w, height: h, center: Vec2::new(w / 2., h / 2.), seed }),
         );
     }
+}
+
+fn legend_swatch(ui: &mut egui::Ui, color: Color32, label: &str) {
+    ui.horizontal(|ui| {
+        let (rect, _) = ui.allocate_exact_size(egui::vec2(14.0, 10.0), Sense::hover());
+        ui.painter().rect_filled(rect, 2.0, color);
+        ui.painter().rect_stroke(rect, 2.0, egui::Stroke::new(0.5, Color32::from_gray(80)));
+        ui.label(egui::RichText::new(label).small());
+    });
 }
 
 impl eframe::App for DebugVisualizer {
@@ -57,6 +112,9 @@ impl eframe::App for DebugVisualizer {
                         }
                         params_changed |= changed;
                     }
+
+                    ui.separator();
+                    self.draw_legend(ui);
                 });
             });
 

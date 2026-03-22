@@ -193,6 +193,21 @@ struct LandmassConfig {
 - Redistribute final values via histogram equalization — prevents all-mountains or all-flatlands.
 - Stored on both cells (average) and corners (precise — required for river flow calculation).
 
+#### Hydraulic Erosion (feature-flagged, deferred to pre-Stage 7)
+
+Optional post-processing step at the end of Stage 4, toggled by `erosion_enabled: bool`.
+Simulates water droplets flowing downhill over N iterations, carrying and depositing sediment:
+
+- **Carves** natural river valley channels — Stage 7 traces these rather than inventing paths.
+- **Deposits** sediment in lowland floodplains (flattens and enriches them).
+- **Identifies** lake sinks — local minima where water pools before reaching the ocean.
+
+When disabled, Stage 7 places rivers heuristically on the raw elevation field.
+Implement this just before Stage 7, once elevation pipeline is stable.
+
+**Reference:** Sebastian Lague — Hydraulic Erosion
+https://www.youtube.com/watch?v=eaXk97ujbPQ
+
 ---
 
 ### Stage 5 — Moisture & Wind
