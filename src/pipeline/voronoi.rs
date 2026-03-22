@@ -52,11 +52,26 @@ pub struct GraphCell {
     pub is_border: bool,
 }
 
+/// A Voronoi edge — the shared boundary segment between two adjacent cells.
+/// Endpoints are two adjacent corners; each side belongs to one cell.
+/// `cell_b` is `None` for boundary edges that face the canvas edge rather than another cell.
+#[derive(Clone, Debug)]
+pub struct GraphEdge {
+    pub id: usize,
+    /// Indices into `GraphOutput::corners`.
+    pub corner_a: usize,
+    pub corner_b: usize,
+    /// IDs of the cells on each side (matches `GraphCell::id`).
+    pub cell_a: usize,
+    pub cell_b: Option<usize>,
+}
+
 /// Output of the Voronoi/Graph stage: the immutable polygon graph.
 #[derive(Clone, Debug)]
 pub struct GraphOutput {
     pub cells: Vec<GraphCell>,
     pub corners: Vec<Corner>,
+    pub edges: Vec<GraphEdge>,
 }
 
 impl StageData for GraphOutput {
@@ -194,7 +209,37 @@ impl PipelineStageExecutor for VoronoiStage {
             }
         }
 
-        Box::new(GraphOutput { cells, corners })
+        // --- Build edges from consecutive corner pairs in each cell polygon ---
+        // Each Voronoi edge is a segment between two adjacent corners, shared by exactly
+        // two cells (or one cell for boundary edges). We deduplicate by sorted corner pair.
+        let mut edges: Vec<GraphEdge> = Vec::new();
+        let mut edge_key_to_id: HashMap<(usize, usize), usize> = HashMap::new();
+
+        for cell in &cells {
+            let n = cell.corner_ids.len();
+            for i in 0..n {
+                let ca = cell.corner_ids[i];
+                let cb = cell.corner_ids[(i + 1) % n];
+                let key = if ca < cb { (ca, cb) } else { (cb, ca) };
+
+                if let Some(&edge_id) = edge_key_to_id.get(&key) {
+                    // Second cell encountered for this edge — fill in cell_b
+                    edges[edge_id].cell_b = Some(cell.id);
+                } else {
+                    let edge_id = edges.len();
+                    edge_key_to_id.insert(key, edge_id);
+                    edges.push(GraphEdge {
+                        id: edge_id,
+                        corner_a: key.0,
+                        corner_b: key.1,
+                        cell_a: cell.id,
+                        cell_b: None,
+                    });
+                }
+            }
+        }
+
+        Box::new(GraphOutput { cells, corners, edges })
     }
 }
 

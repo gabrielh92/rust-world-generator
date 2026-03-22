@@ -7,6 +7,7 @@ pub mod voronoi;
 pub mod landmass;
 pub mod elevation;
 pub mod moisture;
+pub mod biome;
 
 /// Linearly interpolate between two Color32 values.
 pub fn lerp_color(a: Color32, b: Color32, t: f32) -> Color32 {
@@ -84,6 +85,20 @@ impl ColorKey {
         v = (v * factor).clamp(0., 1.);
         let (r2, g2, b2) = hsv_to_rgb(h, s, v);
         Color32::from_rgba_premultiplied(r2, g2, b2, a)
+    }
+}
+
+/// Draw all coast edges from `landmass` as black line segments.
+pub fn draw_coastline(painter: &Painter, ox: f32, oy: f32, landmass: &crate::pipeline::landmass::LandmassOutput) {
+    let stroke = egui::Stroke::new(1.5, Color32::BLACK);
+    for edge in &landmass.edges {
+        if !edge.is_coast { continue; }
+        let pa = landmass.corners[edge.corner_a].position;
+        let pb = landmass.corners[edge.corner_b].position;
+        painter.line_segment(
+            [egui::Pos2::new(ox + pa.x, oy + pa.y), egui::Pos2::new(ox + pb.x, oy + pb.y)],
+            stroke,
+        );
     }
 }
 

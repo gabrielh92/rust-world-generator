@@ -9,6 +9,7 @@ use egui::{Painter, Pos2, Rect, Ui};
 #[derive(Default)]
 pub struct ElevationVisualLayer {
     pub enabled: bool,
+    pub show_coastline: bool,
 }
 
 impl VisualLayer for ElevationVisualLayer {
@@ -20,9 +21,11 @@ impl VisualLayer for ElevationVisualLayer {
         let mut changed = false;
         let name = self.display_name().to_string();
         let enabled = &mut self.enabled;
+        let show_coastline = &mut self.show_coastline;
         ui.collapsing(name, |ui| {
             changed |= ui.checkbox(enabled, "Enabled").changed();
             if *enabled {
+                changed |= ui.checkbox(show_coastline, "Show Coastline").changed();
                 if let Some(p) = params {
                     for param in &mut p.params {
                         changed |= param.draw(ui);
@@ -114,5 +117,9 @@ impl VisualLayer for ElevationVisualLayer {
             2.0,
             ColorKey::PointAlt.egui32(),
         );
+
+        if self.show_coastline {
+            crate::visualization::draw_coastline(painter, ox, oy, landmass);
+        }
     }
 }

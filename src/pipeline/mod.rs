@@ -7,6 +7,7 @@ pub mod voronoi;
 pub mod landmass;
 pub mod elevation;
 pub mod moisture;
+pub mod biome;
 
 /// The central struct that manages and runs all computation stages in sequence.
 /// Owns both the ordered list of stages and their shared data outputs.

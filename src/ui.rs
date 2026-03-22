@@ -3,6 +3,8 @@ use egui::{CentralPanel, Color32, Context, Sense, SidePanel};
 use crate::canvas::{CanvasData, CanvasLayer};
 use crate::mathlib::vec::Vec2;
 use crate::pipeline::Pipeline;
+use crate::visualization::biome::biome_color;
+use crate::pipeline::biome::{Biome, BiomeOutput, STAGE_DATA_KEY as BIOME_KEY};
 use crate::visualization::VisualLayer;
 
 pub struct DebugVisualizer {
@@ -21,7 +23,7 @@ impl DebugVisualizer {
         }
     }
 
-    fn draw_legend(&self, ui: &mut egui::Ui) {
+    fn draw_legend(&self, ui: &mut egui::Ui, biome_out: Option<&BiomeOutput>) {
         ui.collapsing("Legend", |ui| {
             // Determine which view modes are active across enabled stages
             let mut show_elevation  = false;
@@ -40,7 +42,8 @@ impl DebugVisualizer {
                     ("Moisture", "Land Type") => show_moist_type = true,
                     ("Moisture", _)           => show_moisture   = true,
                     (_, "Land Type")          => show_land_type  = true,
-                    _                         => show_elevation  = true,
+                    ("Elevation", _) | ("Landmass", _) => show_elevation = true,
+                    _ => {} // Points, Voronoi, Biome — handled separately
                 }
             }
 
@@ -90,6 +93,45 @@ impl DebugVisualizer {
                 legend_swatch(ui, Color32::from_rgb(90,  160, 70),  "Temperate");
                 legend_swatch(ui, Color32::from_rgb(50,  140, 90),  "Humid");
                 legend_swatch(ui, Color32::from_rgb(30,  100, 120), "Wet");
+            }
+
+            let show_biome = self.pipeline.stages.iter()
+                .any(|s| s.visual_layer.is_enabled() && s.visual_layer.display_name() == "Biome");
+
+            if show_biome {
+                if any { ui.add_space(4.0); }
+                any = true;
+                let pct = |b: Biome| -> String {
+                    match biome_out.and_then(|o| o.biome_fractions.get(&b)) {
+                        Some(f) => format!("  {:.1}%", f * 100.0),
+                        None    => "  0.0%".to_string(),
+                    }
+                };
+                ui.label(egui::RichText::new("Biomes — Ocean").strong().small());
+                legend_swatch(ui, biome_color(Biome::DeepTrench),   &format!("Deep Trench{}", pct(Biome::DeepTrench)));
+                legend_swatch(ui, biome_color(Biome::OpenOcean),    &format!("Open Ocean{}", pct(Biome::OpenOcean)));
+                legend_swatch(ui, biome_color(Biome::ShallowCoast), &format!("Shallow Coast{}", pct(Biome::ShallowCoast)));
+                legend_swatch(ui, biome_color(Biome::Lake),         &format!("Lake{}", pct(Biome::Lake)));
+                ui.add_space(3.0);
+                ui.label(egui::RichText::new("Biomes — Coast").strong().small());
+                legend_swatch(ui, biome_color(Biome::Beach),   &format!("Beach{}", pct(Biome::Beach)));
+                legend_swatch(ui, biome_color(Biome::Wetland), &format!("Wetland{}", pct(Biome::Wetland)));
+                legend_swatch(ui, biome_color(Biome::Mangrove),&format!("Mangrove{}", pct(Biome::Mangrove)));
+                ui.add_space(3.0);
+                ui.label(egui::RichText::new("Biomes — High Elevation").strong().small());
+                legend_swatch(ui, biome_color(Biome::AlpineTundra),  &format!("Alpine Tundra{}", pct(Biome::AlpineTundra)));
+                legend_swatch(ui, biome_color(Biome::AlpineMeadow),  &format!("Alpine Meadow{}", pct(Biome::AlpineMeadow)));
+                legend_swatch(ui, biome_color(Biome::AlpineForest),  &format!("Alpine Forest{}", pct(Biome::AlpineForest)));
+                ui.add_space(3.0);
+                ui.label(egui::RichText::new("Biomes — Mid Elevation").strong().small());
+                legend_swatch(ui, biome_color(Biome::Shrubland),       &format!("Shrubland{}", pct(Biome::Shrubland)));
+                legend_swatch(ui, biome_color(Biome::TemperateForest), &format!("Temperate Forest{}", pct(Biome::TemperateForest)));
+                legend_swatch(ui, biome_color(Biome::Rainforest),      &format!("Rainforest{}", pct(Biome::Rainforest)));
+                ui.add_space(3.0);
+                ui.label(egui::RichText::new("Biomes — Low Elevation").strong().small());
+                legend_swatch(ui, biome_color(Biome::Desert),             &format!("Desert{}", pct(Biome::Desert)));
+                legend_swatch(ui, biome_color(Biome::GrasslandSavanna),   &format!("Grassland / Savanna{}", pct(Biome::GrasslandSavanna)));
+                legend_swatch(ui, biome_color(Biome::TropicalRainforest), &format!("Tropical Rainforest{}", pct(Biome::TropicalRainforest)));
             }
 
             if !any {
@@ -145,7 +187,9 @@ impl eframe::App for DebugVisualizer {
                     }
 
                     ui.separator();
-                    self.draw_legend(ui);
+                    let biome_out = self.pipeline.data.get(BIOME_KEY)
+                        .and_then(|d| d.as_any().downcast_ref::<BiomeOutput>());
+                    self.draw_legend(ui, biome_out);
                 });
             });
 

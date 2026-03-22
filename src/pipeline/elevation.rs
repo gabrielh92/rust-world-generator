@@ -161,8 +161,11 @@ impl PipelineStageExecutor for ElevationStage {
         for (i, cell) in cells.iter().enumerate() {
             if cell.is_border { continue; }
             let noise = perlin.get([cell.center.x as f64 * noise_scale, cell.center.y as f64 * noise_scale]) as f32;
-            let intensity = if cells[i].is_land { 0.06 } else { 0.03 };
-            elevation[i] = (elevation[i] + noise * intensity).clamp(-1.0, 1.0);
+            if cells[i].is_land {
+                elevation[i] = (elevation[i] + noise * 0.06).clamp(0.01, 1.0);
+            } else {
+                elevation[i] = (elevation[i] + noise * 0.03).clamp(-1.0, -0.01);
+            }
         }
 
         // --- Step 6: Post-redistribution smooth (kills any remaining speckle) ---

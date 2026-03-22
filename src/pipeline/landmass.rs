@@ -33,11 +33,25 @@ pub struct LandCell {
     pub neighbor_ids: Vec<usize>,
     pub is_border: bool,
     pub is_land: bool,
-    /// Land cell adjacent to at least one ocean cell.
+    /// Land cell that has at least one coast edge (borders outer ocean, not a lake).
     pub is_coast: bool,
+    /// Ocean cell not reachable from the canvas border — enclosed by land.
+    pub is_lake: bool,
     pub is_ocean: bool,
     /// -1.0 (deep ocean) … 0.0 (sea level) … 1.0 (peak).
     pub elevation: f32,
+}
+
+/// A Voronoi edge annotated with coast status.
+/// `is_coast` is true when one side is land and the other is outer ocean (not a lake).
+#[derive(Debug, Clone)]
+pub struct LandEdge {
+    pub id: usize,
+    pub corner_a: usize,
+    pub corner_b: usize,
+    pub cell_a: usize,
+    pub cell_b: Option<usize>,
+    pub is_coast: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -45,6 +59,8 @@ pub struct LandmassOutput {
     pub cells: Vec<LandCell>,
     /// Corners carried forward from GraphOutput (positions unchanged).
     pub corners: Vec<Corner>,
+    /// Edges annotated with coast status.
+    pub edges: Vec<LandEdge>,
 }
 
 impl StageData for LandmassOutput {
@@ -107,22 +123,120 @@ impl PipelineStageExecutor for LandmassStage {
             _                 => continent_seeds_land(cells, num_seeds, spread_prob, noise_influence, noise_scale, seed, &perlin),
         };
 
-        // --- Step 2: Derive coast / ocean flags ---
+        // --- Step 2: Build id→index map for neighbour lookups ---
         let id_to_idx: HashMap<usize, usize> =
             cells.iter().enumerate().map(|(i, c)| (c.id, i)).collect();
 
-        let is_coast: Vec<bool> = (0..n).map(|i| {
-            if !is_land[i] { return false; }
-            cells[i].neighbor_ids.iter().any(|&nid| {
-                id_to_idx.get(&nid).map_or(false, |&ni| !is_land[ni])
-            })
+        // --- Step 2b: Morphological closing — fill thin ocean channels within the landmass ---
+        // Pass 1-4: any non-border ocean cell where the majority of its neighbours are land
+        // gets converted to land. Removes hairline channels that make the coastline fractal.
+        // This runs BEFORE the outer-ocean BFS so the BFS sees the cleaned-up mask.
+        let mut is_land: Vec<bool> = is_land;
+        for _ in 0..4 {
+            let prev = is_land.clone();
+            for i in 0..n {
+                if prev[i] || cells[i].is_border { continue; }
+                let neighbors: Vec<usize> = cells[i].neighbor_ids.iter()
+                    .filter_map(|&nid| id_to_idx.get(&nid).copied())
+                    .collect();
+                if neighbors.is_empty() { continue; }
+                let land_neighbors = neighbors.iter().filter(|&&ni| prev[ni]).count();
+                if land_neighbors * 2 > neighbors.len() {
+                    is_land[i] = true;
+                }
+            }
+        }
+
+        // Pass 5: fill small enclosed ocean components entirely.
+        // After the initial closing, small disconnected ocean pockets remain.
+        // Any connected ocean component of < MIN_LAKE_CELLS that doesn't touch the
+        // canvas border is converted to land, giving a smoother coastline.
+        const MIN_LAKE_CELLS: usize = 8;
+        {
+            let mut visited = vec![false; n];
+            for start in 0..n {
+                if is_land[start] || cells[start].is_border || visited[start] { continue; }
+                // BFS to find the connected ocean component
+                let mut component = Vec::new();
+                let mut touches_border = false;
+                let mut queue = VecDeque::new();
+                queue.push_back(start);
+                visited[start] = true;
+                while let Some(idx) = queue.pop_front() {
+                    component.push(idx);
+                    if cells[idx].is_border { touches_border = true; }
+                    for &nid in &cells[idx].neighbor_ids {
+                        if let Some(&ni) = id_to_idx.get(&nid) {
+                            if !visited[ni] && !is_land[ni] {
+                                visited[ni] = true;
+                                queue.push_back(ni);
+                            }
+                        }
+                    }
+                }
+                if !touches_border && component.len() < MIN_LAKE_CELLS {
+                    for idx in component { is_land[idx] = true; }
+                }
+            }
+        }
+
+        // --- Step 3: BFS from border ocean cells to distinguish outer ocean from enclosed lakes ---
+        let mut is_outer_ocean = vec![false; n];
+        {
+            let mut queue: VecDeque<usize> = VecDeque::new();
+            for (i, cell) in cells.iter().enumerate() {
+                if cell.is_border && !is_land[i] {
+                    is_outer_ocean[i] = true;
+                    queue.push_back(i);
+                }
+            }
+            while let Some(idx) = queue.pop_front() {
+                for &nid in &cells[idx].neighbor_ids {
+                    if let Some(&ni) = id_to_idx.get(&nid) {
+                        if !is_outer_ocean[ni] && !is_land[ni] {
+                            is_outer_ocean[ni] = true;
+                            queue.push_back(ni);
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- Step 4: Annotate edges with is_coast (land ↔ outer ocean boundary) ---
+        let land_edges: Vec<LandEdge> = graph.edges.iter().map(|e| {
+            let is_coast = if let Some(cb) = e.cell_b {
+                let ia = id_to_idx.get(&e.cell_a).copied();
+                let ib = id_to_idx.get(&cb).copied();
+                match (ia, ib) {
+                    (Some(a), Some(b)) => {
+                        (is_land[a] && is_outer_ocean[b]) || (is_land[b] && is_outer_ocean[a])
+                    }
+                    _ => false,
+                }
+            } else {
+                false
+            };
+            LandEdge { id: e.id, corner_a: e.corner_a, corner_b: e.corner_b, cell_a: e.cell_a, cell_b: e.cell_b, is_coast }
         }).collect();
 
-        // --- Step 3: BFS distance from land/ocean boundary for elevation ---
+        // --- Step 5: Derive per-cell coast flag from coast edges ---
+        // A land cell is coastal only if it has at least one coast edge.
+        // This naturally excludes lake-adjacent land cells.
+        let mut cell_has_coast_edge = vec![false; n];
+        for edge in &land_edges {
+            if !edge.is_coast { continue; }
+            if let Some(ia) = id_to_idx.get(&edge.cell_a) { cell_has_coast_edge[*ia] = true; }
+            if let Some(cb) = edge.cell_b {
+                if let Some(ib) = id_to_idx.get(&cb) { cell_has_coast_edge[*ib] = true; }
+            }
+        }
+
+        // --- Step 6: BFS distance from land/ocean boundary for elevation ---
         let elevation = compute_elevation(cells, &id_to_idx, &is_land, noise_scale, elev_noise, &perlin);
 
-        // --- Step 4: Assemble LandCell output ---
+        // --- Step 7: Assemble LandCell output ---
         let land_cells: Vec<LandCell> = cells.iter().enumerate().map(|(i, gc)| {
+            let is_lake = !is_land[i] && !is_outer_ocean[i] && !gc.is_border;
             LandCell {
                 id: gc.id,
                 center: gc.center,
@@ -130,7 +244,8 @@ impl PipelineStageExecutor for LandmassStage {
                 neighbor_ids: gc.neighbor_ids.clone(),
                 is_border: gc.is_border,
                 is_land: is_land[i],
-                is_coast: is_coast[i],
+                is_coast: cell_has_coast_edge[i],
+                is_lake,
                 is_ocean: !is_land[i],
                 elevation: elevation[i],
             }
@@ -139,6 +254,7 @@ impl PipelineStageExecutor for LandmassStage {
         Box::new(LandmassOutput {
             cells: land_cells,
             corners: graph.corners.clone(),
+            edges: land_edges,
         })
     }
 }

@@ -1,6 +1,11 @@
 use crate::params::builder::ParamGroupBuilder;
 use crate::params::ParamGroup;
 
+pub fn build_default_biome_params() -> ParamGroup {
+    ParamGroupBuilder::new("Biome")
+        .build()
+}
+
 pub fn build_default_moisture_params() -> ParamGroup {
     ParamGroupBuilder::new("Moisture & Wind")
         .enum_param(
