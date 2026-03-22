@@ -24,36 +24,45 @@ impl DebugVisualizer {
     fn draw_legend(&self, ui: &mut egui::Ui) {
         ui.collapsing("Legend", |ui| {
             // Determine which view modes are active across enabled stages
-            let mut show_elevation = false;
-            let mut show_land_type = false;
+            let mut show_elevation  = false;
+            let mut show_land_type  = false;
+            let mut show_moisture   = false;
+            let mut show_moist_type = false;
 
             for stage in &self.pipeline.stages {
                 if !stage.visual_layer.is_enabled() { continue; }
+                let name      = stage.visual_layer.display_name();
                 let view_mode = stage.params.as_ref()
                     .and_then(|p| p.get_param("View Mode"))
                     .map(|p| p.value.as_str())
-                    .unwrap_or("Elevation");
-                match view_mode {
-                    "Land Type" => show_land_type = true,
-                    _           => show_elevation = true,
+                    .unwrap_or("");
+                match (name, view_mode) {
+                    ("Moisture", "Land Type") => show_moist_type = true,
+                    ("Moisture", _)           => show_moisture   = true,
+                    (_, "Land Type")          => show_land_type  = true,
+                    _                         => show_elevation  = true,
                 }
             }
 
+            let mut any = false;
+
             if show_elevation {
+                any = true;
                 ui.label(egui::RichText::new("Elevation").strong().small());
-                legend_swatch(ui, Color32::from_rgb(10,  30,  80),  "Deep Ocean    < -0.5");
-                legend_swatch(ui, Color32::from_rgb(50,  100, 180), "Shallow Ocean  -0.5→-0.1");
-                legend_swatch(ui, Color32::from_rgb(90,  150, 210), "Coast Water   -0.1→0.0");
-                legend_swatch(ui, Color32::from_rgb(220, 200, 140), "Beach          0.0→0.15");
-                legend_swatch(ui, Color32::from_rgb(90,  160, 60),  "Lowland       0.15→0.5");
-                legend_swatch(ui, Color32::from_rgb(65,  120, 45),  "Highland       0.5→0.8");
-                legend_swatch(ui, Color32::from_rgb(120, 100, 80),  "Mountain       0.8→1.0");
-                legend_swatch(ui, Color32::from_rgb(230, 230, 230), "Peak          →1.0");
+                legend_swatch(ui, Color32::from_rgb(10,  30,  80),  "Deep Ocean     < -0.5");
+                legend_swatch(ui, Color32::from_rgb(50,  100, 180), "Shallow Ocean  -0.5 → -0.1");
+                legend_swatch(ui, Color32::from_rgb(90,  150, 210), "Coast Water    -0.1 → 0.0");
+                legend_swatch(ui, Color32::from_rgb(220, 200, 140), "Beach           0.0 → 0.15");
+                legend_swatch(ui, Color32::from_rgb(90,  160, 60),  "Lowland        0.15 → 0.5");
+                legend_swatch(ui, Color32::from_rgb(65,  120, 45),  "Highland        0.5 → 0.8");
+                legend_swatch(ui, Color32::from_rgb(120, 100, 80),  "Mountain        0.8 → 1.0");
+                legend_swatch(ui, Color32::from_rgb(230, 230, 230), "Peak           → 1.0");
             }
 
             if show_land_type {
-                if show_elevation { ui.add_space(4.0); }
-                ui.label(egui::RichText::new("Land Type").strong().small());
+                if any { ui.add_space(4.0); }
+                any = true;
+                ui.label(egui::RichText::new("Land Type (Elevation)").strong().small());
                 legend_swatch(ui, Color32::from_rgb(40,  40,  60),  "Border");
                 legend_swatch(ui, Color32::from_rgb(50,  100, 180), "Ocean");
                 legend_swatch(ui, Color32::from_rgb(220, 200, 140), "Coast");
@@ -61,7 +70,29 @@ impl DebugVisualizer {
                 legend_swatch(ui, Color32::from_rgb(230, 230, 230), "Land (high elev)");
             }
 
-            if !show_elevation && !show_land_type {
+            if show_moisture {
+                if any { ui.add_space(4.0); }
+                any = true;
+                ui.label(egui::RichText::new("Moisture").strong().small());
+                legend_swatch(ui, Color32::from_rgb(200, 170, 100), "Arid       0.0 → 0.25");
+                legend_swatch(ui, Color32::from_rgb(160, 185, 95),  "Semi-arid  0.25 → 0.5");
+                legend_swatch(ui, Color32::from_rgb(80,  160, 80),  "Temperate  0.5 → 0.75");
+                legend_swatch(ui, Color32::from_rgb(40,  125, 100), "Humid      0.75 → 1.0");
+                legend_swatch(ui, Color32::from_rgb(20,  80,  110), "Wet        → 1.0");
+            }
+
+            if show_moist_type {
+                if any { ui.add_space(4.0); }
+                any = true;
+                ui.label(egui::RichText::new("Land Type (Moisture)").strong().small());
+                legend_swatch(ui, Color32::from_rgb(210, 180, 110), "Arid");
+                legend_swatch(ui, Color32::from_rgb(170, 185, 100), "Semi-arid");
+                legend_swatch(ui, Color32::from_rgb(90,  160, 70),  "Temperate");
+                legend_swatch(ui, Color32::from_rgb(50,  140, 90),  "Humid");
+                legend_swatch(ui, Color32::from_rgb(30,  100, 120), "Wet");
+            }
+
+            if !any {
                 ui.label(egui::RichText::new("Enable a stage to see legend").weak().small());
             }
         });

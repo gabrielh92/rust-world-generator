@@ -1,6 +1,35 @@
 use crate::params::builder::ParamGroupBuilder;
 use crate::params::ParamGroup;
 
+pub fn build_default_moisture_params() -> ParamGroup {
+    ParamGroupBuilder::new("Moisture & Wind")
+        .enum_param(
+            "Wind Pattern",
+            vec!["Earth-like".into(), "Uniform".into(), "None".into()],
+            0,
+        )
+        .with_tooltip(
+            "Earth-like: 3-band model (polar easterlies, westerlies, trade winds). \
+             Uniform: single direction angle. None: moisture propagates uniformly from all coasts.",
+        )
+        .float_param("Wind Angle", 270.0, 0.0, 360.0, 5.0)
+        .with_tooltip("[Uniform] Travel direction in degrees (0=east, 90=south, 180=west, 270=north)")
+        .float_param("Moisture Decay", 0.72, 0.5, 1.0, 0.01)
+        .with_tooltip("Fraction of moisture retained per graph-hop inland (lower = drier interiors)")
+        .float_param("Orographic Strength", 0.75, 0.0, 1.0, 0.05)
+        .with_tooltip("How strongly mountain ridges block moisture on their leeward side")
+        .float_param("Mountain Threshold", 0.55, 0.3, 0.9, 0.05)
+        .with_tooltip("Cell elevation above which orographic shadow kicks in")
+        .enum_param(
+            "View Mode",
+            vec!["Moisture".into(), "Land Type".into()],
+            0,
+        )
+        .with_tooltip("Moisture: continuous arid→wet gradient. Land Type: discrete zone colours.")
+        .visual_only()
+        .build()
+}
+
 pub fn build_default_point_params() -> ParamGroup {
     ParamGroupBuilder::new("Point Sampling")
         .enum_param(
