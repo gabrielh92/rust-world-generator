@@ -1,5 +1,7 @@
 use crate::{params::ParamGroup, util::{rgb_to_hsv, hsv_to_rgb}};
 use crate::pipeline::StageDataMap;
+use crate::pipeline::landmass::LandmassOutput;
+use crate::pipeline::river::{RiverOutput, RiverTerminus};
 use egui::{Color32, Painter, Rect, Ui};
 
 pub mod points;
@@ -8,6 +10,7 @@ pub mod landmass;
 pub mod elevation;
 pub mod moisture;
 pub mod biome;
+pub mod river;
 
 /// Linearly interpolate between two Color32 values.
 pub fn lerp_color(a: Color32, b: Color32, t: f32) -> Color32 {
@@ -99,6 +102,34 @@ pub fn draw_coastline(painter: &Painter, ox: f32, oy: f32, landmass: &crate::pip
             [egui::Pos2::new(ox + pa.x, oy + pa.y), egui::Pos2::new(ox + pb.x, oy + pb.y)],
             stroke,
         );
+    }
+}
+
+/// Draw all river paths from `river_out` as line segments scaled by flow.
+pub fn draw_rivers(painter: &Painter, ox: f32, oy: f32, river_scale: f32, landmass: &LandmassOutput, river_out: &RiverOutput) {
+    let corners = &landmass.corners;
+    let corner_flow = &river_out.corner_flow;
+
+    for river in &river_out.rivers {
+        let color = match river.terminus {
+            RiverTerminus::Ocean => Color32::from_rgb(30, 90, 200),
+            RiverTerminus::Lake  => Color32::from_rgb(50, 120, 180),
+            RiverTerminus::Sink  => Color32::from_rgb(80, 100, 150),
+        };
+
+        for window in river.corners.windows(2) {
+            let ci_a = window[0];
+            let ci_b = window[1];
+            let flow = (corner_flow.get(ci_a).copied().unwrap_or(0.0)
+                      + corner_flow.get(ci_b).copied().unwrap_or(0.0)) * 0.5;
+            let width = (river_scale * flow.sqrt() * 4.0).clamp(0.5, 6.0);
+            let pa = corners[ci_a].position;
+            let pb = corners[ci_b].position;
+            painter.line_segment(
+                [egui::Pos2::new(ox + pa.x, oy + pa.y), egui::Pos2::new(ox + pb.x, oy + pb.y)],
+                egui::Stroke::new(width, color),
+            );
+        }
     }
 }
 

@@ -2,6 +2,7 @@ use crate::canvas::CanvasData;
 use crate::params::ParamGroup;
 use crate::pipeline::biome::{Biome, BiomeOutput, STAGE_DATA_KEY as BIOME_KEY};
 use crate::pipeline::landmass::{LandmassOutput, STAGE_DATA_KEY as LANDMASS_KEY};
+use crate::pipeline::river::{RiverOutput, STAGE_DATA_KEY as RIVER_KEY};
 use crate::pipeline::StageDataMap;
 use crate::visualization::VisualLayer;
 use egui::{Color32, Painter, Pos2, Rect, Ui};
@@ -10,6 +11,7 @@ use egui::{Color32, Painter, Pos2, Rect, Ui};
 pub struct BiomeVisualLayer {
     pub enabled: bool,
     pub show_coastline: bool,
+    pub show_rivers: bool,
 }
 
 impl VisualLayer for BiomeVisualLayer {
@@ -26,6 +28,7 @@ impl VisualLayer for BiomeVisualLayer {
             changed |= ui.checkbox(enabled, "Enabled").changed();
             if *enabled {
                 changed |= ui.checkbox(show_coastline, "Show Coastline").changed();
+                changed |= ui.checkbox(&mut self.show_rivers, "Show Rivers").changed();
                 if let Some(p) = params {
                     for param in &mut p.params {
                         changed |= param.draw(ui);
@@ -60,7 +63,7 @@ impl VisualLayer for BiomeVisualLayer {
         };
 
         for (i, cell) in landmass.cells.iter().enumerate() {
-            let biome = biome_out.cell_biomes.get(i).copied().unwrap_or(Biome::OpenOcean);
+            let biome = biome_out.cell_biomes.get(i).copied().unwrap_or(Biome::ShallowOcean);
 
             let points: Vec<Pos2> = cell.corner_ids.iter()
                 .map(|&cid| {
@@ -80,36 +83,37 @@ impl VisualLayer for BiomeVisualLayer {
         if self.show_coastline {
             crate::visualization::draw_coastline(painter, ox, oy, landmass);
         }
+
+        if self.show_rivers {
+            if let Some(river_out) = data.get(RIVER_KEY)
+                .and_then(|d| d.as_any().downcast_ref::<RiverOutput>())
+            {
+                crate::visualization::draw_rivers(painter, ox, oy, 1.0, landmass, river_out);
+            }
+        }
     }
 }
 
 // ---------------------------------------------------------------------------
-// Biome color palette
+// Color palette — vegetation structure tier
 // ---------------------------------------------------------------------------
 
 pub fn biome_color(biome: Biome) -> Color32 {
     match biome {
-        // Ocean
-        Biome::DeepTrench        => Color32::from_rgb(8,   20,  60),
-        Biome::OpenOcean         => Color32::from_rgb(30,  80,  160),
-        Biome::ShallowCoast      => Color32::from_rgb(70,  140, 200),
-        Biome::Lake              => Color32::from_rgb(80,  120, 155),
-        // Special
-        Biome::Border            => Color32::from_rgb(30,  30,  50),
-        Biome::Beach             => Color32::from_rgb(220, 205, 150),
-        Biome::Wetland           => Color32::from_rgb(90,  140, 100),
-        Biome::Mangrove          => Color32::from_rgb(50,  100, 70),
-        // High elevation
-        Biome::AlpineTundra      => Color32::from_rgb(200, 200, 210),
-        Biome::AlpineMeadow      => Color32::from_rgb(160, 185, 150),
-        Biome::AlpineForest      => Color32::from_rgb(80,  120, 90),
-        // Mid elevation
-        Biome::Shrubland         => Color32::from_rgb(180, 160, 100),
-        Biome::TemperateForest   => Color32::from_rgb(60,  130, 60),
-        Biome::Rainforest        => Color32::from_rgb(20,  100, 40),
-        // Low elevation
-        Biome::Desert            => Color32::from_rgb(210, 185, 120),
-        Biome::GrasslandSavanna  => Color32::from_rgb(160, 185, 80),
-        Biome::TropicalRainforest => Color32::from_rgb(10, 120, 50),
+        // Water
+        Biome::DeepOcean    => Color32::from_rgb(8,   20,  60),
+        Biome::ShallowOcean => Color32::from_rgb(40,  100, 170),
+        Biome::Lake         => Color32::from_rgb(70,  140, 190),
+        // Coastal land
+        Biome::Beach        => Color32::from_rgb(220, 205, 150),
+        Biome::Wetland      => Color32::from_rgb(80,  130, 100),
+        // Land vegetation structures
+        Biome::Alpine       => Color32::from_rgb(210, 215, 225),
+        Biome::Sparse       => Color32::from_rgb(200, 175, 110),
+        Biome::Open         => Color32::from_rgb(160, 190, 85),
+        Biome::Dense        => Color32::from_rgb(45,  115, 50),
+        Biome::Riparian     => Color32::from_rgb(55,  150, 115),
+        // System
+        Biome::Border       => Color32::from_rgb(25,  25,  45),
     }
 }

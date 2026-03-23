@@ -2,6 +2,7 @@ use crate::params::util::build_default_biome_params;
 use crate::pipeline::elevation::{ElevationOutput, STAGE_DATA_KEY as ELEVATION_KEY};
 use crate::pipeline::landmass::{LandmassOutput, STAGE_DATA_KEY as LANDMASS_KEY};
 use crate::pipeline::moisture::{MoistureOutput, STAGE_DATA_KEY as MOISTURE_KEY};
+use crate::pipeline::river::{RiverOutput, STAGE_DATA_KEY as RIVER_KEY};
 use crate::pipeline::{PipelineStage, PipelineStageExecutor, StageData, StageDataMap};
 use crate::visualization::biome::BiomeVisualLayer;
 
@@ -16,56 +17,46 @@ pub fn make_biome_stage() -> PipelineStage {
 }
 
 // ---------------------------------------------------------------------------
-// Biome enum
+// Vegetation structure enum
 // ---------------------------------------------------------------------------
 
+/// Tier-1 classification: local vegetation structure derived from elevation,
+/// moisture, and water systems — without global climate context.
+/// Named biomes (Tropical Rainforest, Tundra, etc.) are assigned post-stitch
+/// once latitude and continental position are known.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Biome {
-    // Ocean (by depth)
-    DeepTrench,
-    OpenOcean,
-    ShallowCoast,
-    // Inland water
+    // Water
+    DeepOcean,
+    ShallowOcean,
     Lake,
-    // Special land
-    Border,
+    // Coastal land
     Beach,
     Wetland,
-    Mangrove,
-    // High elevation
-    AlpineTundra,
-    AlpineMeadow,
-    AlpineForest,
-    // Mid elevation
-    Shrubland,
-    TemperateForest,
-    Rainforest,
-    // Low elevation
-    Desert,
-    GrasslandSavanna,
-    TropicalRainforest,
+    // Land vegetation structures
+    Alpine,
+    Sparse,
+    Open,
+    Dense,
+    Riparian,
+    // System
+    Border,
 }
 
 impl Biome {
     pub fn label(self) -> &'static str {
         match self {
-            Biome::DeepTrench        => "Deep Trench",
-            Biome::OpenOcean         => "Open Ocean",
-            Biome::ShallowCoast      => "Shallow Coast",
-            Biome::Lake              => "Lake",
-            Biome::Border            => "Border",
-            Biome::Beach             => "Beach",
-            Biome::Wetland           => "Wetland",
-            Biome::Mangrove          => "Mangrove",
-            Biome::AlpineTundra      => "Alpine Tundra",
-            Biome::AlpineMeadow      => "Alpine Meadow",
-            Biome::AlpineForest      => "Alpine Forest",
-            Biome::Shrubland         => "Shrubland",
-            Biome::TemperateForest   => "Temperate Forest",
-            Biome::Rainforest        => "Rainforest",
-            Biome::Desert            => "Desert",
-            Biome::GrasslandSavanna  => "Grassland / Savanna",
-            Biome::TropicalRainforest => "Tropical Rainforest",
+            Biome::DeepOcean   => "Deep Ocean",
+            Biome::ShallowOcean => "Shallow Ocean",
+            Biome::Lake        => "Lake",
+            Biome::Beach       => "Beach",
+            Biome::Wetland     => "Wetland",
+            Biome::Alpine      => "Alpine",
+            Biome::Sparse      => "Sparse",
+            Biome::Open        => "Open",
+            Biome::Dense       => "Dense",
+            Biome::Riparian    => "Riparian",
+            Biome::Border      => "Border",
         }
     }
 }
@@ -94,10 +85,15 @@ pub struct BiomeStage;
 
 impl PipelineStageExecutor for BiomeStage {
     fn name(&self) -> &str { "biome" }
-    fn rank(&self) -> u8 { 6 }
+    fn rank(&self) -> u8 { 7 }
     fn data_key(&self) -> &'static str { STAGE_DATA_KEY }
 
-    fn run(&mut self, _params: Option<&crate::params::ParamGroup>, data: &StageDataMap) -> Box<dyn StageData> {
+    fn run(&mut self, params: Option<&crate::params::ParamGroup>, data: &StageDataMap) -> Box<dyn StageData> {
+        let smoothing_passes = params
+            .and_then(|p| p.get_param("Smoothing Passes"))
+            .and_then(|p| p.as_int())
+            .unwrap_or(2);
+
         let landmass = data.get(LANDMASS_KEY)
             .and_then(|d| d.as_any().downcast_ref::<LandmassOutput>())
             .expect("Landmass stage must run before Biome stage");
@@ -108,28 +104,38 @@ impl PipelineStageExecutor for BiomeStage {
         let moisture_out = data.get(MOISTURE_KEY)
             .and_then(|d| d.as_any().downcast_ref::<MoistureOutput>());
 
-        // Compute elevation percentiles across land cells to derive adaptive thresholds.
-        // This ensures alpine biomes only dominate if the terrain is genuinely high,
-        // and low/mid bands reflect the actual distribution of the map.
-        // We target: bottom 40% → low, 40-82% → mid, top 18% → high.
-        // An absolute floor of 0.55 for alpine means flat continents have no tundra.
-        let (elev_lo_thresh, elev_hi_thresh) = {
-            let mut land_elevs: Vec<f32> = landmass.cells.iter().enumerate()
+        let river_out = data.get(RIVER_KEY)
+            .and_then(|d| d.as_any().downcast_ref::<RiverOutput>());
+
+        let cells = &landmass.cells;
+        let n = cells.len();
+
+        // Build cell id → index map for neighbor lookups during smoothing
+        let id_to_idx: std::collections::HashMap<usize, usize> =
+            cells.iter().enumerate().map(|(i, c)| (c.id, i)).collect();
+
+        // Compute alpine elevation threshold: 85th percentile of land elevations,
+        // with a floor of 0.60 so flat continents never get alpine.
+        let alpine_threshold = {
+            let mut land_elevs: Vec<f32> = cells.iter().enumerate()
                 .filter(|(_, c)| c.is_land && !c.is_border)
-                .map(|(i, c)| elevation_out.and_then(|e| e.cell_elevations.get(i).copied()).unwrap_or(c.elevation))
+                .map(|(i, _)| {
+                    elevation_out
+                        .and_then(|e| e.cell_elevations.get(i).copied())
+                        .unwrap_or(0.5)
+                })
                 .collect();
             land_elevs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-            let n = land_elevs.len();
-            if n < 2 {
-                (0.35_f32, 0.65_f32)
+            let n_land = land_elevs.len();
+            if n_land < 2 {
+                0.70_f32
             } else {
-                let lo = land_elevs[(n as f32 * 0.40) as usize];
-                let hi = land_elevs[(n as f32 * 0.82) as usize].max(0.55);
-                (lo, hi)
+                land_elevs[(n_land as f32 * 0.85) as usize].max(0.60)
             }
         };
 
-        let cell_biomes: Vec<Biome> = landmass.cells.iter().enumerate().map(|(i, cell)| {
+        // --- Initial per-cell classification ---
+        let mut cell_biomes: Vec<Biome> = cells.iter().enumerate().map(|(i, cell)| {
             if cell.is_border { return Biome::Border; }
 
             let elev = elevation_out
@@ -140,19 +146,62 @@ impl PipelineStageExecutor for BiomeStage {
                 .and_then(|m| m.cell_moisture.get(i).copied())
                 .unwrap_or(0.5);
 
-            if cell.is_lake { return Biome::Lake; }
+            // Water: landmass lakes + river sink-depression lakes
+            let is_lake = cell.is_lake
+                || river_out.and_then(|r| r.lake_cells.get(i).copied()).unwrap_or(false);
+            if is_lake { return Biome::Lake; }
 
+            // Ocean
             if !cell.is_land {
-                return classify_ocean(elev);
+                return if elev < -0.4 { Biome::DeepOcean } else { Biome::ShallowOcean };
             }
 
+            // Alpine (checked before river adjacency — alpine rivers stay Alpine)
+            if elev >= alpine_threshold { return Biome::Alpine; }
+
+            // Coastal land (beach / wetland)
             if cell.is_coast {
-                return classify_coast(moist);
+                return if moist > 0.50 { Biome::Wetland } else { Biome::Beach };
             }
 
-            classify_land(elev, moist, elev_lo_thresh, elev_hi_thresh)
+            // River corridor
+            let river_adj = river_out
+                .and_then(|r| r.cell_has_river.get(i).copied())
+                .unwrap_or(false);
+            if river_adj { return Biome::Riparian; }
+
+            // Interior land — vegetation density by moisture
+            if moist > 0.55      { Biome::Dense }
+            else if moist > 0.28 { Biome::Open  }
+            else                 { Biome::Sparse }
         }).collect();
 
+        // --- Majority-vote spatial smoothing ---
+        // Only applied to land vegetation structures (not water or coast tiles).
+        for _ in 0..smoothing_passes {
+            let prev = cell_biomes.clone();
+            for i in 0..n {
+                if !is_smoothable(prev[i]) { continue; }
+
+                let mut counts: std::collections::HashMap<Biome, usize> = std::collections::HashMap::new();
+                for &nid in &cells[i].neighbor_ids {
+                    if let Some(&ni) = id_to_idx.get(&nid) {
+                        if is_smoothable(prev[ni]) {
+                            *counts.entry(prev[ni]).or_insert(0) += 1;
+                        }
+                    }
+                }
+                if let Some((&majority, &maj_count)) = counts.iter().max_by_key(|(_, &c)| c) {
+                    let neighbor_count = counts.values().sum::<usize>();
+                    // Override if majority holds strictly more than half of smoothable neighbors
+                    if maj_count * 2 > neighbor_count && majority != prev[i] {
+                        cell_biomes[i] = majority;
+                    }
+                }
+            }
+        }
+
+        // --- Biome fraction counts ---
         let total = cell_biomes.iter().filter(|&&b| b != Biome::Border).count() as f32;
         let mut biome_fractions = std::collections::HashMap::new();
         if total > 0.0 {
@@ -167,40 +216,11 @@ impl PipelineStageExecutor for BiomeStage {
 }
 
 // ---------------------------------------------------------------------------
-// Classification helpers — Whittaker diagram
+// Helpers
 // ---------------------------------------------------------------------------
 
-fn classify_ocean(elev: f32) -> Biome {
-    if elev < -0.6      { Biome::DeepTrench   }
-    else if elev < -0.2 { Biome::OpenOcean    }
-    else                { Biome::ShallowCoast }
-}
-
-fn classify_coast(moisture: f32) -> Biome {
-    if moisture < 0.35      { Biome::Beach   }
-    else if moisture < 0.65 { Biome::Wetland }
-    else                    { Biome::Mangrove }
-}
-
-fn classify_land(elev: f32, moisture: f32, elev_lo: f32, elev_hi: f32) -> Biome {
-    // Elevation bands derived from map-wide land percentiles (adaptive thresholds).
-    // Moisture bands are fixed: Low < 0.33, Mid 0.33–0.66, High > 0.66
-    let elev_band = if elev > elev_hi { 2 } else if elev > elev_lo { 1 } else { 0 };
-    let moist_band = if moisture > 0.66 { 2 } else if moisture > 0.33 { 1 } else { 0 };
-
-    match (elev_band, moist_band) {
-        // High elevation
-        (2, 0) => Biome::AlpineTundra,
-        (2, 1) => Biome::AlpineMeadow,
-        (2, 2) => Biome::AlpineForest,
-        // Mid elevation
-        (1, 0) => Biome::Shrubland,
-        (1, 1) => Biome::TemperateForest,
-        (1, 2) => Biome::Rainforest,
-        // Low elevation
-        (0, 0) => Biome::Desert,
-        (0, 1) => Biome::GrasslandSavanna,
-        (0, 2) => Biome::TropicalRainforest,
-        _      => Biome::GrasslandSavanna, // unreachable
-    }
+/// Returns true for biome variants that should participate in smoothing.
+/// Water and coast tiles are topologically determined — don't smooth them.
+fn is_smoothable(b: Biome) -> bool {
+    matches!(b, Biome::Alpine | Biome::Sparse | Biome::Open | Biome::Dense | Biome::Riparian)
 }

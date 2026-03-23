@@ -16,6 +16,7 @@ use crate::{
         landmass::make_landmass_stage,
         moisture::make_moisture_stage,
         points::make_points_stage,
+        river::make_river_stage,
         voronoi::make_voronoi_stage,
     },
     ui::DebugVisualizer,
@@ -34,6 +35,7 @@ fn main() -> eframe::Result<()> {
     pipeline.add_stage(make_landmass_stage());
     pipeline.add_stage(make_elevation_stage());
     pipeline.add_stage(make_moisture_stage());
+    pipeline.add_stage(make_river_stage());
     pipeline.add_stage(make_biome_stage());
 
     let options = eframe::NativeOptions {

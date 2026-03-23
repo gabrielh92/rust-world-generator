@@ -107,31 +107,21 @@ impl DebugVisualizer {
                         None    => "  0.0%".to_string(),
                     }
                 };
-                ui.label(egui::RichText::new("Biomes — Ocean").strong().small());
-                legend_swatch(ui, biome_color(Biome::DeepTrench),   &format!("Deep Trench{}", pct(Biome::DeepTrench)));
-                legend_swatch(ui, biome_color(Biome::OpenOcean),    &format!("Open Ocean{}", pct(Biome::OpenOcean)));
-                legend_swatch(ui, biome_color(Biome::ShallowCoast), &format!("Shallow Coast{}", pct(Biome::ShallowCoast)));
+                ui.label(egui::RichText::new("Vegetation Structure — Water").strong().small());
+                legend_swatch(ui, biome_color(Biome::DeepOcean),    &format!("Deep Ocean{}", pct(Biome::DeepOcean)));
+                legend_swatch(ui, biome_color(Biome::ShallowOcean), &format!("Shallow Ocean{}", pct(Biome::ShallowOcean)));
                 legend_swatch(ui, biome_color(Biome::Lake),         &format!("Lake{}", pct(Biome::Lake)));
                 ui.add_space(3.0);
-                ui.label(egui::RichText::new("Biomes — Coast").strong().small());
+                ui.label(egui::RichText::new("Vegetation Structure — Coast").strong().small());
                 legend_swatch(ui, biome_color(Biome::Beach),   &format!("Beach{}", pct(Biome::Beach)));
                 legend_swatch(ui, biome_color(Biome::Wetland), &format!("Wetland{}", pct(Biome::Wetland)));
-                legend_swatch(ui, biome_color(Biome::Mangrove),&format!("Mangrove{}", pct(Biome::Mangrove)));
                 ui.add_space(3.0);
-                ui.label(egui::RichText::new("Biomes — High Elevation").strong().small());
-                legend_swatch(ui, biome_color(Biome::AlpineTundra),  &format!("Alpine Tundra{}", pct(Biome::AlpineTundra)));
-                legend_swatch(ui, biome_color(Biome::AlpineMeadow),  &format!("Alpine Meadow{}", pct(Biome::AlpineMeadow)));
-                legend_swatch(ui, biome_color(Biome::AlpineForest),  &format!("Alpine Forest{}", pct(Biome::AlpineForest)));
-                ui.add_space(3.0);
-                ui.label(egui::RichText::new("Biomes — Mid Elevation").strong().small());
-                legend_swatch(ui, biome_color(Biome::Shrubland),       &format!("Shrubland{}", pct(Biome::Shrubland)));
-                legend_swatch(ui, biome_color(Biome::TemperateForest), &format!("Temperate Forest{}", pct(Biome::TemperateForest)));
-                legend_swatch(ui, biome_color(Biome::Rainforest),      &format!("Rainforest{}", pct(Biome::Rainforest)));
-                ui.add_space(3.0);
-                ui.label(egui::RichText::new("Biomes — Low Elevation").strong().small());
-                legend_swatch(ui, biome_color(Biome::Desert),             &format!("Desert{}", pct(Biome::Desert)));
-                legend_swatch(ui, biome_color(Biome::GrasslandSavanna),   &format!("Grassland / Savanna{}", pct(Biome::GrasslandSavanna)));
-                legend_swatch(ui, biome_color(Biome::TropicalRainforest), &format!("Tropical Rainforest{}", pct(Biome::TropicalRainforest)));
+                ui.label(egui::RichText::new("Vegetation Structure — Land").strong().small());
+                legend_swatch(ui, biome_color(Biome::Alpine),   &format!("Alpine{}", pct(Biome::Alpine)));
+                legend_swatch(ui, biome_color(Biome::Sparse),   &format!("Sparse{}", pct(Biome::Sparse)));
+                legend_swatch(ui, biome_color(Biome::Open),     &format!("Open{}", pct(Biome::Open)));
+                legend_swatch(ui, biome_color(Biome::Dense),    &format!("Dense{}", pct(Biome::Dense)));
+                legend_swatch(ui, biome_color(Biome::Riparian), &format!("Riparian{}", pct(Biome::Riparian)));
             }
 
             if !any {

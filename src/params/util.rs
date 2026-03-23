@@ -3,6 +3,8 @@ use crate::params::ParamGroup;
 
 pub fn build_default_biome_params() -> ParamGroup {
     ParamGroupBuilder::new("Biome")
+        .int_param("Smoothing Passes", 2, 0, 6, 1)
+        .with_tooltip("Majority-vote smoothing passes after classification — higher values merge microclimates into larger blobs")
         .build()
 }
 
@@ -114,6 +116,24 @@ pub fn build_default_elevation_params() -> ParamGroup {
             0,
         )
         .with_tooltip("Elevation: gradient by height.  Land Type: flat colours per cell type")
+        .visual_only()
+        .build()
+}
+
+pub fn build_default_river_params() -> ParamGroup {
+    ParamGroupBuilder::new("River")
+        .enum_param("Erosion", vec!["None".into(), "Flow Weighted".into()], 0)
+        .with_tooltip("Flow Weighted: single-pass channel carving proportional to sqrt(accumulated flow)")
+        .float_param("Carve Strength", 0.08, 0.0, 0.3, 0.005)
+        .with_tooltip("Erosion depth multiplier (k: elev -= k * sqrt(flow))")
+        .float_param("Min Flow", 0.04, 0.001, 0.2, 0.001)
+        .with_tooltip("Minimum normalized flow at river mouth to keep a path")
+        .int_param("Min Length", 4, 2, 20, 1)
+        .with_tooltip("Minimum corner count for a river path to be kept")
+        .float_param("Lake Depth Threshold", 0.05, 0.0, 0.3, 0.005)
+        .with_tooltip("depth = spill_elevation - depression_elevation: >= threshold → lake, < threshold → overflow")
+        .float_param("River Scale", 1.0, 0.1, 5.0, 0.1)
+        .with_tooltip("Visual width multiplier for river rendering")
         .visual_only()
         .build()
 }
