@@ -43,9 +43,9 @@ pub fn build_default_point_params() -> ParamGroup {
             0,
         )
         .with_tooltip("Point distribution algorithm. Poisson Disc gives the most natural-looking mesh.")
-        .int_param("Point Count", 300, 10, 5000, 10)
+        .int_param("Point Count", 500, 10, 5000, 10)
         .with_tooltip("Number of points (used by Random Uniform and Uniform Grid)")
-        .float_param("Min Distance", 35.0, 5.0, 120.0, 1.0)
+        .float_param("Min Distance", 15.0, 5.0, 120.0, 1.0)
         .with_tooltip("Minimum spacing between points (used by Poisson Disc — controls point density)")
         .float_param("Point Radius", 2.0, 0.5, 8.0, 0.5)
         .with_tooltip("Visual display radius of each point (rendering only)")
@@ -142,7 +142,7 @@ pub fn build_default_landmass_params() -> ParamGroup {
         // --- continent seeds params ---
         .int_param("Num Seeds", 5, 1, 20, 1)
         .with_tooltip("[Seeds] Number of continent anchor points")
-        .float_param("Spread Probability", 0.72, 0.1, 1.0, 0.01)
+        .float_param("Spread Probability", 0.4, 0.2, 0.6, 0.01)
         .with_tooltip("[Seeds] Base probability of land spreading to a neighbour")
         .float_param("Noise Influence", 0.25, 0.0, 1.0, 0.01)
         .with_tooltip("[Seeds] How much Perlin noise perturbs the spread probability")
