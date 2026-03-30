@@ -28,6 +28,7 @@ impl ParamGroupBuilder {
             name: name.into(),
             tooltip: None,
             visual_only: false,
+            is_divider: false,
             value: Box::new(IntParam { val, min, max, step }),
         });
         self
@@ -39,6 +40,7 @@ impl ParamGroupBuilder {
             name: name.into(),
             tooltip: None,
             visual_only: false,
+            is_divider: false,
             value: Box::new(BoolParam { val }),
         });
         self
@@ -56,6 +58,7 @@ impl ParamGroupBuilder {
             name: name.into(),
             tooltip: None,
             visual_only: false,
+            is_divider: false,
             value: Box::new(FloatParam { val, min, max, step }),
         });
         self
@@ -71,7 +74,21 @@ impl ParamGroupBuilder {
             name: name.into(),
             tooltip: None,
             visual_only: false,
+            is_divider: false,
             value: Box::new(EnumParam { options, selected }),
+        });
+        self
+    }
+
+    /// Insert a labelled section divider. Renders as a separator + small bold label.
+    /// Does not affect param lookup or pipeline re-run logic.
+    pub fn with_section(mut self, label: impl Into<String>) -> Self {
+        self.params.push(Param {
+            name: label.into(),
+            tooltip: None,
+            visual_only: true,
+            is_divider: true,
+            value: Box::new(BoolParam { val: false }), // unused
         });
         self
     }

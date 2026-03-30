@@ -4,7 +4,7 @@ use crate::pipeline::elevation::{ElevationOutput, STAGE_DATA_KEY as ELEVATION_KE
 use crate::pipeline::landmass::{LandmassOutput, STAGE_DATA_KEY as LANDMASS_KEY};
 use crate::pipeline::StageDataMap;
 use crate::visualization::{elevation_color, lerp_color, ColorKey, VisualLayer};
-use egui::{Painter, Pos2, Rect, Ui};
+use egui::{Align2, FontId, Painter, Pos2, Rect, Ui};
 
 #[derive(Default)]
 pub struct ElevationVisualLayer {
@@ -40,8 +40,10 @@ impl VisualLayer for ElevationVisualLayer {
         if !self.enabled { return; }
 
         let pg = match params { Some(p) => p, None => return };
-        let water_level = pg.get_param("Water Level").and_then(|p| p.as_float()).unwrap_or(0.0);
-        let view_mode   = pg.get_param("View Mode").map(|p| p.value.as_str()).unwrap_or("Elevation");
+        let water_level  = pg.get_param("Water Level").and_then(|p| p.as_float()).unwrap_or(0.0);
+        let view_mode    = pg.get_param("View Mode").map(|p| p.value.as_str()).unwrap_or("Elevation");
+        let show_labels  = pg.get_param("Show Labels").and_then(|p| p.as_bool()).unwrap_or(false);
+        let label_scale  = pg.get_param("Label Scale").map(|p| p.value.as_str()).unwrap_or("Earth-like");
 
         let canvas = data.get("canvas")
             .and_then(|d| d.as_any().downcast_ref::<CanvasData>())
@@ -110,6 +112,31 @@ impl VisualLayer for ElevationVisualLayer {
             };
 
             painter.add(egui::Shape::convex_polygon(points, fill, egui::Stroke::NONE));
+
+            if show_labels && !cell.is_border {
+                let meters = elevation_to_meters(elevation, label_scale);
+                let label = if meters.abs() >= 100.0 {
+                    format!("{:.0}m", meters)
+                } else {
+                    format!("{:.1}m", meters)
+                };
+                let center = Pos2::new(ox + cell.center.x, oy + cell.center.y);
+                // Dark shadow then bright text for readability on any background
+                painter.text(
+                    center + egui::vec2(1.0, 1.0),
+                    Align2::CENTER_CENTER,
+                    &label,
+                    FontId::proportional(9.0),
+                    egui::Color32::from_black_alpha(160),
+                );
+                painter.text(
+                    center,
+                    Align2::CENTER_CENTER,
+                    &label,
+                    FontId::proportional(9.0),
+                    egui::Color32::WHITE,
+                );
+            }
         }
 
         painter.circle_filled(
@@ -120,6 +147,26 @@ impl VisualLayer for ElevationVisualLayer {
 
         if self.show_coastline {
             crate::visualization::draw_coastline(painter, ox, oy, landmass);
+        }
+    }
+}
+
+/// Convert a normalised elevation value [-1, 1] to metres using the chosen scale mode.
+///
+/// Earth-like uses separate power-law exponents for land and ocean that approximate
+/// the real hypsometric curve: land elevations are right-skewed (most terrain is low,
+/// peaks are rare), while ocean floor quickly reaches deep basins.
+fn elevation_to_meters(v: f32, scale_mode: &str) -> f32 {
+    match scale_mode {
+        "Linear"     => v * 8000.0,
+        "Compressed" => v * 2000.0,
+        _ => {
+            // Earth-like: asymmetric power law
+            if v >= 0.0 {
+                v.powf(1.5) * 8850.0   // land: 0 → 8850m (Everest), skewed toward lowlands
+            } else {
+                -((-v).powf(0.7) * 10994.0) // ocean: 0 → -10994m (Mariana), deep basins common
+            }
         }
     }
 }

@@ -260,10 +260,25 @@ pub struct Param {
     /// trigger a pipeline re-run. Use for display-only controls like water
     /// level, view mode, point radius, label toggles, etc.
     pub visual_only: bool,
+    /// If true, this entry is a section divider — rendered as a labelled
+    /// separator; `value` is unused and `draw()` always returns false.
+    pub is_divider: bool,
 }
 
 impl Param {
     pub fn draw(&mut self, ui: &mut egui::Ui) -> bool {
+        if self.is_divider {
+            ui.add_space(2.0);
+            ui.separator();
+            ui.label(
+                egui::RichText::new(&self.name)
+                    .small()
+                    .strong()
+                    .color(egui::Color32::from_gray(160)),
+            );
+            return false;
+        }
+
         let mut value_changed = false;
         // Push a unique ID scope per param so that widgets like ComboBox
         // don't collide when multiple enum params exist in the same group.
