@@ -165,6 +165,41 @@ pub fn build_default_river_params() -> ParamGroup {
         .build()
 }
 
+pub fn build_default_feature_params() -> ParamGroup {
+    ParamGroupBuilder::new("Features")
+        .with_section("Detection")
+        .float_param("Pass Max Elevation", 0.45, 0.1, 0.7, 0.02)
+        .with_tooltip("Land cells below this elevation qualify as mountain pass candidates")
+        .float_param("Pass Min Neighbor Elevation", 0.60, 0.3, 1.0, 0.02)
+        .with_tooltip("Neighbor cells above this elevation count as 'mountain' for pass detection")
+        .int_param("Pass Min Mountain Neighbors", 2, 1, 4, 1)
+        .with_tooltip("Minimum number of mountain neighbors required to tag a cell as a mountain pass")
+        .float_param("Fertile Max Elevation", 0.30, 0.05, 0.6, 0.02)
+        .with_tooltip("Land cells below this elevation qualify as fertile valley candidates")
+        .float_param("Fertile Min Moisture", 0.55, 0.3, 1.0, 0.05)
+        .with_tooltip("Minimum moisture for fertile valley classification")
+        .with_section("Display")
+        .bool_param("Show River Mouths", true)
+        .with_tooltip("Mark cells where rivers reach the coast")
+        .visual_only()
+        .bool_param("Show Harbor Candidates", true)
+        .with_tooltip("Mark coast cells sheltered by land on multiple sides")
+        .visual_only()
+        .bool_param("Show Mountain Passes", true)
+        .with_tooltip("Mark low-elevation cells flanked by high-elevation neighbors")
+        .visual_only()
+        .bool_param("Show Fertile Valleys", true)
+        .with_tooltip("Mark low-elevation, moist, river-adjacent land cells")
+        .visual_only()
+        .bool_param("Show Resource Nodes", true)
+        .with_tooltip("Mark noise-distributed resource placeholder locations")
+        .visual_only()
+        .float_param("Icon Size", 4.0, 1.5, 10.0, 0.5)
+        .with_tooltip("Radius of feature indicator circles")
+        .visual_only()
+        .build()
+}
+
 pub fn build_default_landmass_params() -> ParamGroup {
     ParamGroupBuilder::new("Landmass")
         .enum_param(

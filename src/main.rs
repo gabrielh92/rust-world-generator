@@ -13,6 +13,7 @@ use crate::{
     pipeline::{
         biome::make_biome_stage,
         elevation::make_elevation_stage,
+        feature::make_feature_stage,
         landmass::make_landmass_stage,
         moisture::make_moisture_stage,
         points::make_points_stage,
@@ -37,6 +38,7 @@ fn main() -> eframe::Result<()> {
     pipeline.add_stage(make_moisture_stage());
     pipeline.add_stage(make_river_stage());
     pipeline.add_stage(make_biome_stage());
+    pipeline.add_stage(make_feature_stage());
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()

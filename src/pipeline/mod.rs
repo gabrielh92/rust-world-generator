@@ -9,6 +9,7 @@ pub mod elevation;
 pub mod moisture;
 pub mod biome;
 pub mod river;
+pub mod feature;
 
 /// The central struct that manages and runs all computation stages in sequence.
 /// Owns both the ordered list of stages and their shared data outputs.

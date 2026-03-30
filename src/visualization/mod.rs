@@ -11,6 +11,7 @@ pub mod elevation;
 pub mod moisture;
 pub mod biome;
 pub mod river;
+pub mod feature;
 
 /// Linearly interpolate between two Color32 values.
 pub fn lerp_color(a: Color32, b: Color32, t: f32) -> Color32 {
