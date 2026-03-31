@@ -1,7 +1,7 @@
 use crate::canvas::CanvasData;
 use crate::params::ParamGroup;
 use crate::pipeline::biome::{Biome, BiomeOutput, STAGE_DATA_KEY as BIOME_KEY};
-use crate::pipeline::landmass::{LandmassOutput, STAGE_DATA_KEY as LANDMASS_KEY};
+use crate::pipeline::terrain::{TerrainOutput, STAGE_DATA_KEY as TERRAIN_KEY};
 use crate::pipeline::river::{RiverOutput, STAGE_DATA_KEY as RIVER_KEY};
 use crate::pipeline::StageDataMap;
 use crate::visualization::VisualLayer;
@@ -48,8 +48,8 @@ impl VisualLayer for BiomeVisualLayer {
         let ox = rect.center().x - canvas.width / 2.0;
         let oy = rect.center().y - canvas.height / 2.0;
 
-        let landmass = match data.get(LANDMASS_KEY)
-            .and_then(|d| d.as_any().downcast_ref::<LandmassOutput>())
+        let landmass = match data.get(TERRAIN_KEY)
+            .and_then(|d| d.as_any().downcast_ref::<TerrainOutput>())
         {
             Some(l) => l,
             None => return,
@@ -81,14 +81,14 @@ impl VisualLayer for BiomeVisualLayer {
         }
 
         if self.show_coastline {
-            crate::visualization::draw_coastline(painter, ox, oy, landmass);
+            crate::visualization::draw_coastline_terrain(painter, ox, oy, landmass);
         }
 
         if self.show_rivers {
             if let Some(river_out) = data.get(RIVER_KEY)
                 .and_then(|d| d.as_any().downcast_ref::<RiverOutput>())
             {
-                crate::visualization::draw_rivers(painter, ox, oy, 1.0, landmass, river_out);
+                crate::visualization::draw_rivers_terrain(painter, ox, oy, 1.0, landmass, river_out);
             }
         }
     }

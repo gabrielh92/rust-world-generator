@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use crate::params::util::build_default_river_params;
-use crate::pipeline::elevation::{ElevationOutput, STAGE_DATA_KEY as ELEVATION_KEY};
-use crate::pipeline::landmass::{LandmassOutput, STAGE_DATA_KEY as LANDMASS_KEY};
+use crate::pipeline::terrain::{TerrainOutput, STAGE_DATA_KEY as TERRAIN_KEY};
 use crate::pipeline::moisture::{MoistureOutput, STAGE_DATA_KEY as MOISTURE_KEY};
 use crate::pipeline::voronoi::Corner;
 use crate::pipeline::{PipelineStage, PipelineStageExecutor, StageData, StageDataMap};
@@ -73,19 +72,15 @@ impl PipelineStageExecutor for RiverStage {
         let min_length      = pg.get_param("Min Length").and_then(|p| p.as_int()).unwrap_or(4);
         let lake_depth_threshold = pg.get_param("Lake Depth Threshold").and_then(|p| p.as_float()).unwrap_or(0.05);
 
-        let landmass = data.get(LANDMASS_KEY)
-            .and_then(|d| d.as_any().downcast_ref::<LandmassOutput>())
-            .expect("Landmass stage must run before River stage");
-
-        let elevation_out = data.get(ELEVATION_KEY)
-            .and_then(|d| d.as_any().downcast_ref::<ElevationOutput>())
-            .expect("Elevation stage must run before River stage");
+        let terrain = data.get(TERRAIN_KEY)
+            .and_then(|d| d.as_any().downcast_ref::<TerrainOutput>())
+            .expect("Terrain stage must run before River stage");
 
         let moisture_out = data.get(MOISTURE_KEY)
             .and_then(|d| d.as_any().downcast_ref::<MoistureOutput>());
 
-        let cells = &landmass.cells;
-        let corners = &landmass.corners;
+        let cells = &terrain.cells;
+        let corners = &terrain.corners;
         let n_corners = corners.len();
         let n_cells = cells.len();
 
@@ -94,7 +89,7 @@ impl PipelineStageExecutor for RiverStage {
             cells.iter().enumerate().map(|(i, c)| (c.id, i)).collect();
 
         // --- Step 1: Clone corner elevations (mutable for erosion) ---
-        let mut corner_elev = elevation_out.corner_elevations.clone();
+        let mut corner_elev = terrain.corner_elevations.clone();
 
         // --- Step 2: Classify corners ---
         let mut corner_is_land = vec![false; n_corners];

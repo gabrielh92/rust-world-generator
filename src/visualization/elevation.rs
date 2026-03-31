@@ -1,7 +1,6 @@
 use crate::canvas::CanvasData;
 use crate::params::ParamGroup;
-use crate::pipeline::elevation::{ElevationOutput, STAGE_DATA_KEY as ELEVATION_KEY};
-use crate::pipeline::landmass::{LandmassOutput, STAGE_DATA_KEY as LANDMASS_KEY};
+use crate::pipeline::terrain::{TerrainOutput, STAGE_DATA_KEY as TERRAIN_KEY};
 use crate::pipeline::StageDataMap;
 use crate::visualization::{elevation_color, lerp_color, ColorKey, VisualLayer};
 use egui::{Align2, FontId, Painter, Pos2, Rect, Ui};
@@ -51,22 +50,15 @@ impl VisualLayer for ElevationVisualLayer {
         let ox = rect.center().x - canvas.width / 2.0;
         let oy = rect.center().y - canvas.height / 2.0;
 
-        let landmass = match data.get(LANDMASS_KEY)
-            .and_then(|d| d.as_any().downcast_ref::<LandmassOutput>())
+        let landmass = match data.get(TERRAIN_KEY)
+            .and_then(|d| d.as_any().downcast_ref::<TerrainOutput>())
         {
             Some(l) => l,
             None => return,
         };
 
-        let elev_out = match data.get(ELEVATION_KEY)
-            .and_then(|d| d.as_any().downcast_ref::<ElevationOutput>())
-        {
-            Some(e) => e,
-            None => return,
-        };
-
-        for (i, cell) in landmass.cells.iter().enumerate() {
-            let elevation = elev_out.cell_elevations.get(i).copied().unwrap_or(cell.elevation);
+        for (_i, cell) in landmass.cells.iter().enumerate() {
+            let elevation = cell.elevation;
 
             let points: Vec<Pos2> = cell.corner_ids.iter()
                 .map(|&cid| {
@@ -146,7 +138,7 @@ impl VisualLayer for ElevationVisualLayer {
         );
 
         if self.show_coastline {
-            crate::visualization::draw_coastline(painter, ox, oy, landmass);
+            crate::visualization::draw_coastline_terrain(painter, ox, oy, landmass);
         }
     }
 }

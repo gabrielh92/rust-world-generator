@@ -1,6 +1,5 @@
 use crate::params::util::build_default_biome_params;
-use crate::pipeline::elevation::{ElevationOutput, STAGE_DATA_KEY as ELEVATION_KEY};
-use crate::pipeline::landmass::{LandmassOutput, STAGE_DATA_KEY as LANDMASS_KEY};
+use crate::pipeline::terrain::{TerrainOutput, STAGE_DATA_KEY as TERRAIN_KEY};
 use crate::pipeline::moisture::{MoistureOutput, STAGE_DATA_KEY as MOISTURE_KEY};
 use crate::pipeline::river::{RiverOutput, STAGE_DATA_KEY as RIVER_KEY};
 use crate::pipeline::{PipelineStage, PipelineStageExecutor, StageData, StageDataMap};
@@ -94,12 +93,9 @@ impl PipelineStageExecutor for BiomeStage {
             .and_then(|p| p.as_int())
             .unwrap_or(2);
 
-        let landmass = data.get(LANDMASS_KEY)
-            .and_then(|d| d.as_any().downcast_ref::<LandmassOutput>())
-            .expect("Landmass stage must run before Biome stage");
-
-        let elevation_out = data.get(ELEVATION_KEY)
-            .and_then(|d| d.as_any().downcast_ref::<ElevationOutput>());
+        let terrain = data.get(TERRAIN_KEY)
+            .and_then(|d| d.as_any().downcast_ref::<TerrainOutput>())
+            .expect("Terrain stage must run before Biome stage");
 
         let moisture_out = data.get(MOISTURE_KEY)
             .and_then(|d| d.as_any().downcast_ref::<MoistureOutput>());
@@ -107,7 +103,7 @@ impl PipelineStageExecutor for BiomeStage {
         let river_out = data.get(RIVER_KEY)
             .and_then(|d| d.as_any().downcast_ref::<RiverOutput>());
 
-        let cells = &landmass.cells;
+        let cells = &terrain.cells;
         let n = cells.len();
 
         // Build cell id → index map for neighbor lookups during smoothing
@@ -117,13 +113,9 @@ impl PipelineStageExecutor for BiomeStage {
         // Compute alpine elevation threshold: 85th percentile of land elevations,
         // with a floor of 0.60 so flat continents never get alpine.
         let alpine_threshold = {
-            let mut land_elevs: Vec<f32> = cells.iter().enumerate()
-                .filter(|(_, c)| c.is_land && !c.is_border)
-                .map(|(i, _)| {
-                    elevation_out
-                        .and_then(|e| e.cell_elevations.get(i).copied())
-                        .unwrap_or(0.5)
-                })
+            let mut land_elevs: Vec<f32> = cells.iter()
+                .filter(|c| c.is_land && !c.is_border)
+                .map(|c| c.elevation)
                 .collect();
             land_elevs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
             let n_land = land_elevs.len();
@@ -138,9 +130,7 @@ impl PipelineStageExecutor for BiomeStage {
         let mut cell_biomes: Vec<Biome> = cells.iter().enumerate().map(|(i, cell)| {
             if cell.is_border { return Biome::Border; }
 
-            let elev = elevation_out
-                .and_then(|e| e.cell_elevations.get(i).copied())
-                .unwrap_or(cell.elevation);
+            let elev = cell.elevation;
 
             let moist = moisture_out
                 .and_then(|m| m.cell_moisture.get(i).copied())

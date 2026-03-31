@@ -2,7 +2,7 @@ use crate::canvas::CanvasData;
 use crate::visualization::{elevation_color, lerp_color, ColorKey, VisualLayer};
 use crate::params::ParamGroup;
 use crate::pipeline::StageDataMap;
-use crate::pipeline::landmass::{LandmassOutput, STAGE_DATA_KEY as LANDMASS_KEY};
+use crate::pipeline::terrain::{TerrainOutput, STAGE_DATA_KEY as TERRAIN_KEY};
 use egui::{Painter, Pos2, Rect, Ui};
 
 #[derive(Default)]
@@ -48,8 +48,8 @@ impl VisualLayer for LandmassVisualLayer {
         let oy = rect.center().y - canvas.height / 2.0;
 
         let output = match data
-            .get(LANDMASS_KEY)
-            .and_then(|d| d.as_any().downcast_ref::<LandmassOutput>())
+            .get(TERRAIN_KEY)
+            .and_then(|d| d.as_any().downcast_ref::<TerrainOutput>())
         {
             Some(o) => o,
             None => return,

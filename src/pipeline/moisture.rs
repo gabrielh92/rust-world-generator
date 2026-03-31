@@ -6,8 +6,7 @@ use rand_pcg::Pcg64;
 use crate::canvas::CanvasData;
 use crate::mathlib::vec::Vec2;
 use crate::params::util::build_default_moisture_params;
-use crate::pipeline::elevation::{ElevationOutput, STAGE_DATA_KEY as ELEVATION_KEY};
-use crate::pipeline::landmass::{LandmassOutput, STAGE_DATA_KEY as LANDMASS_KEY};
+use crate::pipeline::terrain::{TerrainOutput, STAGE_DATA_KEY as TERRAIN_KEY};
 use crate::pipeline::{PipelineStage, PipelineStageExecutor, StageData, StageDataMap};
 use crate::visualization::moisture::MoistureVisualLayer;
 
@@ -60,17 +59,14 @@ impl PipelineStageExecutor for MoistureStage {
             .and_then(|d| d.as_any().downcast_ref::<CanvasData>())
             .expect("Canvas data required for moisture stage");
 
-        let landmass = data.get(LANDMASS_KEY)
-            .and_then(|d| d.as_any().downcast_ref::<LandmassOutput>())
-            .expect("Landmass stage must run before Moisture stage");
-
-        let elevation_out = data.get(ELEVATION_KEY)
-            .and_then(|d| d.as_any().downcast_ref::<ElevationOutput>());
+        let terrain = data.get(TERRAIN_KEY)
+            .and_then(|d| d.as_any().downcast_ref::<TerrainOutput>())
+            .expect("Terrain stage must run before Moisture stage");
 
         // Seed derived deterministically (unused directly but keeps the contract clear)
         let _rng = Pcg64::seed_from_u64(canvas.seed ^ 0x4D4F_4953_5455u64); // "MOISTU"
 
-        let cells = &landmass.cells;
+        let cells = &terrain.cells;
         let n = cells.len();
 
         // Scale iterations to mesh size so deep-interior cells are always reached.
@@ -133,9 +129,7 @@ impl PipelineStageExecutor for MoistureStage {
 
                     // Orographic shadow: mountains on the upwind side block moisture.
                     // The higher above threshold, the stronger the block.
-                    let neighbor_elev = elevation_out
-                        .and_then(|e| e.cell_elevations.get(ni).copied())
-                        .unwrap_or(neighbor.elevation);
+                    let neighbor_elev = neighbor.elevation;
                     let shadow = if neighbor_elev > mountain_thresh {
                         let excess = ((neighbor_elev - mountain_thresh) / (1.0 - mountain_thresh)).min(1.0);
                         1.0 - orog_strength * excess

@@ -4,8 +4,7 @@ use noise::{NoiseFn, Perlin};
 
 use crate::canvas::CanvasData;
 use crate::params::util::build_default_feature_params;
-use crate::pipeline::elevation::{ElevationOutput, STAGE_DATA_KEY as ELEVATION_KEY};
-use crate::pipeline::landmass::{LandmassOutput, STAGE_DATA_KEY as LANDMASS_KEY};
+use crate::pipeline::terrain::{TerrainOutput, STAGE_DATA_KEY as TERRAIN_KEY};
 use crate::pipeline::moisture::{MoistureOutput, STAGE_DATA_KEY as MOISTURE_KEY};
 use crate::pipeline::river::{RiverOutput, RiverTerminus, STAGE_DATA_KEY as RIVER_KEY};
 use crate::pipeline::{PipelineStage, PipelineStageExecutor, StageData, StageDataMap};
@@ -80,12 +79,9 @@ impl PipelineStageExecutor for FeatureStage {
             .and_then(|p| p.as_float()).unwrap_or(0.55);
 
         // Read required data
-        let landmass = data.get(LANDMASS_KEY)
-            .and_then(|d| d.as_any().downcast_ref::<LandmassOutput>())
-            .expect("Landmass stage must run before Feature stage");
-
-        let elevation_out = data.get(ELEVATION_KEY)
-            .and_then(|d| d.as_any().downcast_ref::<ElevationOutput>());
+        let landmass = data.get(TERRAIN_KEY)
+            .and_then(|d| d.as_any().downcast_ref::<TerrainOutput>())
+            .expect("Terrain stage must run before Feature stage");
 
         let moisture_out = data.get(MOISTURE_KEY)
             .and_then(|d| d.as_any().downcast_ref::<MoistureOutput>());
@@ -161,26 +157,24 @@ impl PipelineStageExecutor for FeatureStage {
         // MountainPass: non-coast, non-border land cell below pass_max_elevation
         // with enough high-elevation neighbors.
         // -------------------------------------------------------------------
-        if let Some(elev) = elevation_out {
-            for (i, cell) in cells.iter().enumerate() {
-                if !cell.is_land || cell.is_coast || cell.is_border { continue; }
+        for (i, cell) in cells.iter().enumerate() {
+            if !cell.is_land || cell.is_coast || cell.is_border { continue; }
 
-                let cell_elev = elev.cell_elevations.get(i).copied().unwrap_or(0.0);
-                if cell_elev >= pass_max_elevation { continue; }
+            let cell_elev = cell.elevation;
+            if cell_elev >= pass_max_elevation { continue; }
 
-                let mut mountain_neighbor_count = 0usize;
-                for &nid in &cell.neighbor_ids {
-                    if let Some(&ni) = cell_id_to_idx.get(&nid) {
-                        let neighbor_elev = elev.cell_elevations.get(ni).copied().unwrap_or(0.0);
-                        if neighbor_elev > pass_min_neighbor_elevation {
-                            mountain_neighbor_count += 1;
-                        }
+            let mut mountain_neighbor_count = 0usize;
+            for &nid in &cell.neighbor_ids {
+                if let Some(&ni) = cell_id_to_idx.get(&nid) {
+                    let neighbor_elev = cells[ni].elevation;
+                    if neighbor_elev > pass_min_neighbor_elevation {
+                        mountain_neighbor_count += 1;
                     }
                 }
+            }
 
-                if mountain_neighbor_count >= pass_min_mountain_neighbors {
-                    cell_features[i].insert(Feature::MountainPass);
-                }
+            if mountain_neighbor_count >= pass_min_mountain_neighbors {
+                cell_features[i].insert(Feature::MountainPass);
             }
         }
 
@@ -188,19 +182,21 @@ impl PipelineStageExecutor for FeatureStage {
         // FertileValley: non-coast, non-border land cell with low elevation,
         // high moisture, and river adjacency.
         // -------------------------------------------------------------------
-        if let (Some(elev), Some(moisture), Some(river)) = (elevation_out, moisture_out, river_out) {
-            for (i, cell) in cells.iter().enumerate() {
-                if !cell.is_land || cell.is_coast || cell.is_border { continue; }
+        if let Some(moisture) = moisture_out {
+            if let Some(river) = river_out {
+                for (i, cell) in cells.iter().enumerate() {
+                    if !cell.is_land || cell.is_coast || cell.is_border { continue; }
 
-                let cell_elev = elev.cell_elevations.get(i).copied().unwrap_or(1.0);
-                let cell_moisture = moisture.cell_moisture.get(i).copied().unwrap_or(0.0);
-                let has_river = river.cell_has_river.get(i).copied().unwrap_or(false);
+                    let cell_elev = cell.elevation;
+                    let cell_moisture = moisture.cell_moisture.get(i).copied().unwrap_or(0.0);
+                    let has_river = river.cell_has_river.get(i).copied().unwrap_or(false);
 
-                if cell_elev < fertile_max_elevation
-                    && cell_moisture > fertile_min_moisture
-                    && has_river
-                {
-                    cell_features[i].insert(Feature::FertileValley);
+                    if cell_elev < fertile_max_elevation
+                        && cell_moisture > fertile_min_moisture
+                        && has_river
+                    {
+                        cell_features[i].insert(Feature::FertileValley);
+                    }
                 }
             }
         }

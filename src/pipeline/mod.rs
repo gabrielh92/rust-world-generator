@@ -6,6 +6,7 @@ pub mod points;
 pub mod voronoi;
 pub mod landmass;
 pub mod elevation;
+pub mod terrain;
 pub mod moisture;
 pub mod biome;
 pub mod river;

@@ -12,12 +12,11 @@ use pipeline::Pipeline;
 use crate::{
     pipeline::{
         biome::make_biome_stage,
-        elevation::make_elevation_stage,
         feature::make_feature_stage,
-        landmass::make_landmass_stage,
         moisture::make_moisture_stage,
         points::make_points_stage,
         river::make_river_stage,
+        terrain::make_terrain_stage,
         voronoi::make_voronoi_stage,
     },
     ui::DebugVisualizer,
@@ -33,8 +32,7 @@ fn main() -> eframe::Result<()> {
     // 1. todo: add brief description of pipeline stage
     pipeline.add_stage(make_points_stage());
     pipeline.add_stage(make_voronoi_stage());
-    pipeline.add_stage(make_landmass_stage());
-    pipeline.add_stage(make_elevation_stage());
+    pipeline.add_stage(make_terrain_stage());
     pipeline.add_stage(make_moisture_stage());
     pipeline.add_stage(make_river_stage());
     pipeline.add_stage(make_biome_stage());

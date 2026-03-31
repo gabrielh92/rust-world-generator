@@ -1,6 +1,6 @@
 use crate::canvas::CanvasData;
 use crate::params::ParamGroup;
-use crate::pipeline::landmass::{LandmassOutput, STAGE_DATA_KEY as LANDMASS_KEY};
+use crate::pipeline::terrain::{TerrainOutput, STAGE_DATA_KEY as TERRAIN_KEY};
 use crate::pipeline::river::{RiverOutput, STAGE_DATA_KEY as RIVER_KEY};
 use crate::pipeline::StageDataMap;
 use crate::visualization::VisualLayer;
@@ -45,8 +45,8 @@ impl VisualLayer for RiverVisualLayer {
         let ox = rect.center().x - canvas.width / 2.0;
         let oy = rect.center().y - canvas.height / 2.0;
 
-        let landmass = match data.get(LANDMASS_KEY)
-            .and_then(|d| d.as_any().downcast_ref::<LandmassOutput>())
+        let landmass = match data.get(TERRAIN_KEY)
+            .and_then(|d| d.as_any().downcast_ref::<TerrainOutput>())
         {
             Some(l) => l,
             None => return,
@@ -64,6 +64,6 @@ impl VisualLayer for RiverVisualLayer {
             .and_then(|p| p.as_float())
             .unwrap_or(1.0);
 
-        crate::visualization::draw_rivers(painter, ox, oy, river_scale, landmass, river_out);
+        crate::visualization::draw_rivers_terrain(painter, ox, oy, river_scale, landmass, river_out);
     }
 }

@@ -1,6 +1,6 @@
 use crate::canvas::CanvasData;
 use crate::params::ParamGroup;
-use crate::pipeline::landmass::{LandmassOutput, STAGE_DATA_KEY as LANDMASS_KEY};
+use crate::pipeline::terrain::{TerrainOutput, STAGE_DATA_KEY as TERRAIN_KEY};
 use crate::pipeline::moisture::{MoistureOutput, STAGE_DATA_KEY as MOISTURE_KEY};
 use crate::pipeline::StageDataMap;
 use crate::visualization::{lerp_color, ColorKey, VisualLayer};
@@ -42,8 +42,8 @@ impl VisualLayer for MoistureVisualLayer {
         let ox = rect.center().x - canvas.width / 2.0;
         let oy = rect.center().y - canvas.height / 2.0;
 
-        let landmass = match data.get(LANDMASS_KEY)
-            .and_then(|d| d.as_any().downcast_ref::<LandmassOutput>())
+        let landmass = match data.get(TERRAIN_KEY)
+            .and_then(|d| d.as_any().downcast_ref::<TerrainOutput>())
         {
             Some(l) => l,
             None => return,
